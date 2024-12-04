@@ -1,0 +1,6 @@
+broadcast-mode = "sync"
+chain-id = "structstestnet-100"
+keyring-backend = "file"
+keyring-dir = "/var/structs/accounts"
+node = "tcp://structsd:26657"
+output = "josn"
