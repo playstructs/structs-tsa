@@ -16,6 +16,7 @@ RUN apt-get update && \
         curl \
         wget \
         golang \
+        nodejs \
         &&  \
     rm -rf /var/lib/apt/lists/*
 
@@ -48,6 +49,13 @@ RUN mkdir /var/structs && \
 COPY config/client.toml /var/structs/chain/config/client.toml
 
 ENV PATH="$PATH:/var/structs/bin"
+
+
+RUN git clone https://github.com/playstructs/structs-sign-proxy.git && \
+    cd structs-sign-proxy && \
+    npm install -g . && \
+    cd ..
+
 
 
 # Building latest structsd
