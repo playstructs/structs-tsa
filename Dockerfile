@@ -18,8 +18,16 @@ RUN apt-get update && \
         golang \
         nodejs \
         npm \
-        jq \
-        &&  \
+        jq
+
+
+
+RUN  sed -i "s/read enter//g" /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+RUN  cat /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh && \
+     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh && \
+     apt-get -y install postgresql-client
+
+
     rm -rf /var/lib/apt/lists/*
 
 ENV PATH=$PATH:/usr/local/go/bin
