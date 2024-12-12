@@ -18,6 +18,7 @@ RUN apt-get update && \
         golang \
         nodejs \
         npm \
+        jq \
         &&  \
     rm -rf /var/lib/apt/lists/*
 

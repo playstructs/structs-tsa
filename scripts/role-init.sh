@@ -15,8 +15,6 @@ echo "Adding Mnemonic to the shared keychain"
 TEMP_NAME=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c10)
 echo "$MNEMONIC" | structsd keys add "$TEMP_NAME" --recover
 
-
-
 # Get the address of what was just added
 
 # Loop / Check the database for the role
