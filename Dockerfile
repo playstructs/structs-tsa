@@ -28,7 +28,7 @@ RUN  cat /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh && \
      apt-get -y install postgresql-client
 
 
-    rm -rf /var/lib/apt/lists/*
+RUN  rm -rf /var/lib/apt/lists/*
 
 ENV PATH=$PATH:/usr/local/go/bin
 
