@@ -17,6 +17,7 @@ RUN apt-get update && \
         wget \
         golang \
         nodejs \
+        npm \
         &&  \
     rm -rf /var/lib/apt/lists/*
 
