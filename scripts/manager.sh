@@ -6,6 +6,9 @@ ROLE=""
 ACCOUNT_ID=""
 SLEEP=10
 
+
+sleep 600000
+
 # Come online
 
 # Import Key or Generate New Key
@@ -34,4 +37,3 @@ PENDING_TRANSACTION=$(psql -c 'select signer.CLAIM_TRANSACTION($ROLE_ID, $ACCOUN
 psql -c 'select signer.TRANSACTION_ERROR(transaction_id INTEGER, transaction_error TEXT);' --no-align -t
 
 psql -c 'select signer.TRANSACTION_BROADCAST_RESULTS(transaction_id INTEGER, transaction_output TEXT);' --no-align -t
-
