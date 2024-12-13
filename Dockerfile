@@ -6,7 +6,8 @@ LABEL maintainer="Slow Ninja <info@slow.ninja>"
 
 # Variables
 ENV DEBIAN_FRONTEND=noninteractive \
-      NETWORK_VERSION="100b"
+      NETWORK_VERSION="100b" \
+      AGENT_TARGET_NUMBER=20
 
 # Install packages
 RUN apt-get update && \
@@ -55,7 +56,8 @@ RUN chmod a+x /src/structs/*
 RUN mkdir /var/structs && \
     mkdir /var/structs/bin && \
     mkdir /var/structs/chain && \
-    mkdir /var/structs/accounts
+    mkdir /var/structs/accounts && \
+    mkdir /var/structs/tsa
 
 COPY config/client.toml /var/structs/chain/config/client.toml
 

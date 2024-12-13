@@ -10,13 +10,24 @@ SLEEP=60
 # Report to the DB about being online
 
 echo "Loading TSA Signing Manager"
+until [ -e /var/structs/tsa/ready ]
+do
+  echo "Waiting for readiness check. Have you run role-init.sh?"
+  sleep 10
+done
 
-echo "Does anything exist?"
-echo $ROLE_ID
-echo $ACCOUNT_ID
+ROLE_ID=$(cat /var/structs/tsa/role)
+echo "Loaded Role ${ROLE_ID}"
 
 while :
 do
+
+  # need to track the number of accounts in use
+
+  # Check for an unused account
+
+
+
 
   PENDING_TRANSACTION=$(psql -c 'select signer.CLAIM_TRANSACTION($ROLE_ID, $ACCOUNT_ID);' --no-align -t)
   echo $PENDING_TRANSACTION
