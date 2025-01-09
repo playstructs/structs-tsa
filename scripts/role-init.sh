@@ -64,7 +64,7 @@ fi
 ACCOUNT_ADDRESS=$(structsd keys show "$TEMP_NAME" | jq -r ".address" )
 
 # Add the account to the database
-NEW_ACCOUNT_ID=$(psql -c "SELECT signer.LOAD_INTERNAL_ACCOUNTS('[{\"address\":\"${ACCOUNT_ADDRESS}\"}]';" --no-align -t)
+NEW_ACCOUNT=$(psql -c "SELECT signer.LOAD_INTERNAL_ACCOUNTS('[{\"address\":\"${ACCOUNT_ADDRESS}\"}]';" --no-align -t)
 
 # rename the account to the role account id
 structsd keys rename $TEMP_NAME account_$ACCOUNT_ADDRESS
