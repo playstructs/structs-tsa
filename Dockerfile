@@ -57,7 +57,8 @@ RUN mkdir /var/structs && \
     mkdir /var/structs/bin && \
     mkdir /var/structs/chain && \
     mkdir /var/structs/accounts && \
-    mkdir /var/structs/tsa
+    mkdir /var/structs/tsa && \
+    mkdir /var/structs/tsa/tmp
 
 COPY config/client.toml /var/structs/chain/config/client.toml
 

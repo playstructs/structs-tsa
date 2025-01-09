@@ -2,34 +2,28 @@
 # Variables
 
 NETWORK=""
-ROLE=""
 ACCOUNT_ID=""
-ACCOUNT_NAME="signer"
-SLEEP=10
+ACCOUNT_NAME=""
+SLEEP=5
 
 # Come online
+  # Great work! Keep this up and you'll be promoted to Senior Signer
 
 
-# Import Key or Generate New Key
+if [ -e /var/structs/tsa/tmp/tx_$1.json ]; then
+  echo "AGENT: I can't work under these conditions! Where the heck is my transaction ${1} "
+  exit
+fi
 
-  # Check the database for what account it is
-  # signer.CLAIM_ACCOUNT(requested_role_id CHARACTER VARYING)
+echo "AGENT: Reviewing Transaction Details"
 
-  # if all are taken then make a new one
-  # if status = new
-    # create a new key
-    #  signer.PENDING_ACCOUNT(account_id INTEGER, new_address CHARACTER VARYING)
-  # else
-    # Check the key volume for the key file
-    # load it into structsd keychain
+PENDING_TRANSACTION_ID=$()
+PENDING_COMMAND=$()
+echo "ECHO"
 
-
+PENDING_TRANSACTION_ACCOUNT=$(psql -c 'select signer.CLAIM_INTERNAL_ACCOUNT($1);' --no-align -t)
 
 
-# Report to the DB about being online
-
-
-PENDING_TRANSACTION=$(psql -c 'select signer.CLAIM_TRANSACTION($ROLE_ID, $ACCOUNT_ID);' --no-align -t)
 
 #{
 #  "id": 1,
