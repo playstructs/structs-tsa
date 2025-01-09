@@ -73,7 +73,9 @@ RUN git clone https://github.com/playstructs/structs-sign-proxy.git && \
 # Building latest structsd
 RUN git clone https://github.com/playstructs/structsd.git && \
     cd structsd && \
-    ignite chain build && \
+    ignite chain build
+
+RUN mkdir -p /usr/local/go/bin && \
     cp /root/go/bin/structsd /usr/local/go/bin/structsd
 
 # Run Structs
