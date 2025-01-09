@@ -5,20 +5,13 @@ echo "Trans-Planetary Signing Authority (TSA)"
 echo ""
 
 
-if [ -e /var/structs/tsa/role ]
-then
-  ORIGINAL_ROLE_ID=$(cat /var/structs/tsa/role)
-  echo "ERROR: Role ${ORIGINAL_ROLE_ID} already found...."
-  exit
-fi
-
 # Read Mnemonic
 echo "Are you creating a new role, or importing an old one? (import/new):"
 read -r PROCESS
 
 if [[ "$PROCESS" == "new" ]]
 then
-  echo "Initializing a Role..."
+  echo "Initializing an Role..."
 
   echo "Adding Mnemonic to the shared keychain"
   TEMP_NAME=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c10)
@@ -67,22 +60,14 @@ else
 
 fi
 
-
 # Get the address of what was just added
-ROLE_ADDRESS=$(structsd keys show "$TEMP_NAME" | jq -r ".address" )
+ACCOUNT_ADDRESS=$(structsd keys show "$TEMP_NAME" | jq -r ".address" )
 
-# Loop / Check the database for the role
-until [ -e /var/structs/tsa/role ]
-do
-  NEW_ROLE_ID=$(psql -c "SELECT player_id FROM player_address WHERE address = '$ROLE_ADDRESS';" --no-align -t)
-  if [[ "$NEW_ROLE_ID" != "" ]]
-  then
-    echo $NEW_ROLE_ID > /var/structs/tsa/role
-  fi
-done
+# Add the account to the database
+NEW_ACCOUNT_ID=$(psql -c "SELECT signer.LOAD_INTERNAL_ACCOUNTS('[{\"address\":\"${ACCOUNT_ADDRESS}\"}]';" --no-align -t)
 
 # rename the account to the role account id
-structsd keys rename $TEMP_NAME $NEW_ROLE_ID
+structsd keys rename $TEMP_NAME account_$ACCOUNT_ADDRESS
 
 touch /var/structs/tsa/ready
 

@@ -25,7 +25,7 @@ do
   PENDING_TRANSACTION=$(psql -c 'select signer.CLAIM_INTERNAL_TRANSACTION();' --no-align -t)
   PENDING_TX_ID=$(echo $PENDING_TRANSACTION | jq -r '.id')
 
-  if [[ ! -z "${VAR}" ]]; then
+  if [[ ! -z "${PENDING_TX_ID}" ]]; then
     echo $PENDING_TRANSACTION > /var/structs/tsa/tmp/tx_${PENDING_TX_ID}.json
 
     echo "Launching Agent Minion for Transaction ${PENDING_TX_ID}"
