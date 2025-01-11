@@ -20,7 +20,7 @@ while :
 do
 
   # Check for pending addresses
-  SELECT * FROM signer.account WHERE status = 'new' and role_id IN (wut)
+  NEW_ACCOUNT=$(psql -c "SELECT * FROM signer.account WHERE status = 'new';" --no-align -t)
 
   # sign the message
 
