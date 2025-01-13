@@ -1,36 +1,20 @@
 #!/usr/bin/env bash
 
 # Variables
-SLEEP=30
-
-
-# Come Online
-  # Done. Great work team.
-
-# Report to the DB about being online
-  # No place to put this yet
-
-# Check to see if the TSA has been initialized
-echo "Loading TSA Signing Manager"
-until [ -e /var/structs/tsa/ready ]
-do
-  echo "Waiting for readiness check. Have you run role-init.sh?"
-  sleep 10
-done
-
+ACCOUNT_MANAGER_SLEEP=30
 
 while :
 do
-  PENDING_TRANSACTION=$(psql -c 'select signer.CLAIM_INTERNAL_TRANSACTION();' --no-align -t)
-  PENDING_TX_ID=$(echo $PENDING_TRANSACTION | jq -r '.id')
+  STUB_ACCOUNT_JSON=$(psql -c 'select signer.GET_NEW_ACCOUNT();' --no-align -t)
+  STUB_ACCOUNT_ID=$(echo $STUB_ACCOUNT_JSON | jq -r '.id')
 
-  if [[ ! -z "${PENDING_TX_ID}" ]]; then
-    echo $PENDING_TRANSACTION > /var/structs/tsa/tmp/tx_${PENDING_TX_ID}.json
+  if [[ ! -z "${STUB_ACCOUNT_ID}" ]]; then
+    echo $STUB_ACCOUNT_JSON > /var/structs/tsa/tmp/account_${STUB_ACCOUNT_ID}.json
 
-    echo "Launching Agent Minion for Transaction ${PENDING_TX_ID}"
-    ./account-agent.sh "${PENDING_TX_ID}" &
+    echo "Launching Agent Minion for Transaction ${STUB_ACCOUNT_ID}"
+    ./account-agent.sh "${STUB_ACCOUNT_ID}" &
   else
-      sleep $SLEEP
+      sleep $ACCOUNT_MANAGER_SLEEP
   fi
 
 done

@@ -5,7 +5,7 @@ ROLE_AGENT_SLEEP=30
 CLIENT_FLAGS="--gas auto --yes=true"
 
 
-# Look for the transaction json blob in the tmp folder
+# Look for the role json blob in the tmp folder
 if [ -e /var/structs/tsa/tmp/role_$1.json ]; then
   echo "ROLE AGENT($BASHPID): I can't work under these conditions! Where the heck is my role ${1} "
   exit
@@ -51,7 +51,7 @@ NEW_ROLE_TRANSACTION_JSON=$(psql -c "SELECT signer.CREATE_TRANSACTION('${STUB_RO
 
 
 # Wait for the address to show up in the permissions table
-until [ $ADDRESS_COUNT -gt 0 ]; then
+until [ $ADDRESS_COUNT -gt 0 ];
 do
   sleep $ROLE_AGENT_SLEEP
   ADDRESS_COUNT=$( psql -c "select count(1) from structs.permission WHERE object_index = '${ACCOUNT_ADDRESS}';" --no-align -t)
