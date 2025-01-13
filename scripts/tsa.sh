@@ -4,11 +4,11 @@ STAT_SLEEP=20
 
 echo "Loading The TSA"
 
-./role-manager.sh &
+bash /src/structs/role-manager.sh &
 
-./transaction-manager.sh &
+bash /src/structs/transaction-manager.sh &
 
-./account-manager.sh &
+bash /src/structs/account-manager.sh &
 
 while :
 do

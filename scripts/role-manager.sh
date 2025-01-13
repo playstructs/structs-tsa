@@ -14,7 +14,7 @@ do
     echo $STUB_ROLE > /var/structs/tsa/tmp/role_${STUB_ROLE_ID}.json
 
     echo "Launching Agent Minion for Role Generation ${STUB_ROLE_ID}"
-    ./role-agent.sh "${STUB_ROLE_ID}" &
+    bash /src/structs/role-agent.sh "${STUB_ROLE_ID}" &
   else
       sleep $ROLE_MANAGER_SLEEP
   fi

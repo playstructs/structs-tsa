@@ -12,7 +12,7 @@ do
     echo $STUB_ACCOUNT_JSON > /var/structs/tsa/tmp/account_${STUB_ACCOUNT_ID}.json
 
     echo "Launching Agent Minion for Transaction ${STUB_ACCOUNT_ID}"
-    ./account-agent.sh "${STUB_ACCOUNT_ID}" &
+    bash /src/structs/account-agent.sh "${STUB_ACCOUNT_ID}" &
   else
       sleep $ACCOUNT_MANAGER_SLEEP
   fi

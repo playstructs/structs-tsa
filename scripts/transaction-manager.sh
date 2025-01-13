@@ -13,7 +13,7 @@ do
     echo $PENDING_TRANSACTION > /var/structs/tsa/tmp/tx_${PENDING_TX_ID}.json
 
     echo "TX MANAGER: Launching Agent Minion for Transaction ${PENDING_TX_ID}"
-    ./transaction-agent.sh "${PENDING_TX_ID}" &
+    bash /src/structs/transaction-agent.sh "${PENDING_TX_ID}" &
   else
       sleep $TRANSACTION_MANAGER_SLEEP
   fi
