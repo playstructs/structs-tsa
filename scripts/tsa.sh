@@ -12,7 +12,9 @@ echo "Loading The TSA"
 
 while :
 do
-  echo "TSA: __ Pending Transactions "
+  # Get latest stats
+  PENDING_TRANSACTION_COUNT=$(psql -c "SELECT COUNT(1) FROM signer.tx WHERE status = 'pending';" --no-align -t)
+  echo "TSA: ${PENDING_TRANSACTION_COUNT} Pending Transactions "
 
   sleep $STAT_SLEEP
 done

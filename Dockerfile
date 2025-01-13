@@ -79,4 +79,4 @@ RUN mkdir -p /usr/local/go/bin && \
     cp /root/go/bin/structsd /usr/local/go/bin/structsd
 
 # Run Structs
-CMD [ "/src/structs/manager.sh" ]
+CMD [ "/src/structs/tsa.sh" ]
