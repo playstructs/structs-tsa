@@ -28,7 +28,7 @@ do
     echo $PENDING_TRANSACTION > /var/structs/tsa/tmp/tx_${PENDING_TX_ID}.json
 
     echo "Launching Agent Minion for Transaction ${PENDING_TX_ID}"
-    ./agent.sh "${PENDING_TX_ID}" &
+    ./role-agent.sh "${PENDING_TX_ID}" &
   else
       sleep $SLEEP
   fi
