@@ -15,7 +15,7 @@ then
 
   echo "Adding Mnemonic to the shared keychain"
   TEMP_NAME=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c10)
-  MNEMONIC=$(structsd keys add "$TEMP_NAME" | jq ".mnemonic")
+  MNEMONIC=$(structsd keys add "$TEMP_NAME" | jq -r ".mnemonic")
 
   # Get the address of what was just added
   ACCOUNT_ADDRESS=$(structsd keys show "$TEMP_NAME" | jq -r ".address" )
@@ -25,8 +25,8 @@ then
 
   # TSA sign a proxy-join message
   SIGNED_PROXY_JSON=$(structs-sign-proxy guild-join ${GUILD_ID} 0 "$MNEMONIC")
-  SIGNED_PROXY_PUBKEY=$( echo ${SIGNED_PROXY_JSON} | jq ".pubkey" )
-  SIGNED_PROXY_SIGNATURE=$( echo ${SIGNED_PROXY_JSON} | jq ".signature" )
+  SIGNED_PROXY_PUBKEY=$( echo ${SIGNED_PROXY_JSON} | jq -r ".pubkey" )
+  SIGNED_PROXY_SIGNATURE=$( echo ${SIGNED_PROXY_JSON} | jq -r ".signature" )
 
   echo "Generating Signature for TX..."
   echo "${ACCOUNT_ADDRESS} ${SIGNED_PROXY_PUBKEY} ${SIGNED_PROXY_SIGNATURE}"

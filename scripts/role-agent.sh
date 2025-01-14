@@ -15,15 +15,15 @@ fi
 echo "ROLE AGENT($BASHPID): Reviewing Role Details"
 
 STUB_ROLE_JSON=$(cat /var/structs/tsa/tmp/tx_$1.json)
-STUB_ROLE_ID=$( echo ${STUB_ROLE_JSON} | jq ".id" )
-STUB_ROLE_GUILD_ID=$( echo ${STUB_ROLE_JSON} | jq ".guild_id" )
+STUB_ROLE_ID=$( echo ${STUB_ROLE_JSON} | jq -r ".id" )
+STUB_ROLE_GUILD_ID=$( echo ${STUB_ROLE_JSON} | jq -r ".guild_id" )
 
 echo "ROLE AGENT($BASHPID): ROLE_ID(${STUB_ROLE_ID}) GUILD_ID(${PENDING_OBJECT_ID})"
 
 
 # Create the new primary Role address
 TEMP_NAME=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c10)
-MNEMONIC=$(structsd keys add "$TEMP_NAME" | jq ".mnemonic")
+MNEMONIC=$(structsd keys add "$TEMP_NAME" | jq -r ".mnemonic")
 
 # Get the address of what was just added
 ACCOUNT_ADDRESS=$(structsd keys show "$TEMP_NAME" | jq -r ".address" )
@@ -33,8 +33,8 @@ structsd keys rename $TEMP_NAME account_$ACCOUNT_ADDRESS
 
 # TSA sign a proxy-join message
 SIGNED_PROXY_JSON=$(structs-sign-proxy guild-join ${STUB_ROLE_GUILD_ID} 0 "$MNEMONIC")
-SIGNED_PROXY_PUBKEY=$( echo ${SIGNED_PROXY_JSON} | jq ".pubkey" )
-SIGNED_PROXY_SIGNATURE=$( echo ${SIGNED_PROXY_JSON} | jq ".signature" )
+SIGNED_PROXY_PUBKEY=$( echo ${SIGNED_PROXY_JSON} | jq -r ".pubkey" )
+SIGNED_PROXY_SIGNATURE=$( echo ${SIGNED_PROXY_JSON} | jq -r ".signature" )
 
 echo "ROLE AGENT($BASHPID): Signature for Role Proxy Join ${ACCOUNT_ADDRESS} ${SIGNED_PROXY_PUBKEY} ${SIGNED_PROXY_SIGNATURE}"
 

@@ -17,14 +17,14 @@ fi
 echo "ACCOUNT AGENT($BASHPID): Reviewing Account Details"
 
 STUB_ACCOUNT_JSON=$(cat /var/structs/tsa/tmp/tx_$1.json)
-STUB_ACCOUNT_ID=$( echo ${STUB_ACCOUNT_JSON} | jq ".id" )
-STUB_ACCOUNT_ROLE_ID=$( echo ${STUB_ACCOUNT_JSON} | jq ".role_id" )
-STUB_ACCOUNT_PLAYER_ID=$( echo ${STUB_ACCOUNT_JSON} | jq ".player_id" )
+STUB_ACCOUNT_ID=$( echo ${STUB_ACCOUNT_JSON} | jq -r ".id" )
+STUB_ACCOUNT_ROLE_ID=$( echo ${STUB_ACCOUNT_JSON} | jq -r ".role_id" )
+STUB_ACCOUNT_PLAYER_ID=$( echo ${STUB_ACCOUNT_JSON} | jq -r ".player_id" )
 
 
 echo "Adding Mnemonic to the shared keychain"
 TEMP_NAME=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c10)
-MNEMONIC=$(structsd keys add "$TEMP_NAME" | jq ".mnemonic")
+MNEMONIC=$(structsd keys add "$TEMP_NAME" | jq -r ".mnemonic")
 
 
 # Get the address of what was just added
@@ -36,8 +36,8 @@ structsd keys rename $TEMP_NAME account_$ACCOUNT_ADDRESS
 # TSA sign an address-register message
 echo "ACCOUNT AGENT($BASHPID): Generating Signature for Address Register"
 SIGNED_ADDRESS_REGISTER_JSON=$(structs-sign-proxy address-register ${STUB_ACCOUNT_PLAYER_ID} "$MNEMONIC")
-SIGNED_ADDRESS_REGISTER_PUBKEY=$( echo ${SIGNED_ADDRESS_REGISTER_JSON} | jq ".pubkey" )
-SIGNED_ADDRESS_REGISTER_SIGNATURE=$( echo ${SIGNED_ADDRESS_REGISTER_JSON} | jq ".signature" )
+SIGNED_ADDRESS_REGISTER_PUBKEY=$( echo ${SIGNED_ADDRESS_REGISTER_JSON} | jq -r ".pubkey" )
+SIGNED_ADDRESS_REGISTER_SIGNATURE=$( echo ${SIGNED_ADDRESS_REGISTER_JSON} | jq -r ".signature" )
 
 
 # TODO: Fix this permission issue at the end.

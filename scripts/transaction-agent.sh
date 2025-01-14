@@ -17,16 +17,16 @@ fi
 echo "AGENT($BASHPID): Reviewing Transaction Details"
 
 PENDING_TRANSACTION_JSON=$(cat /var/structs/tsa/tmp/tx_$1.json)
-PENDING_TRANSACTION_ID=$( echo ${PENDING_TRANSACTION_JSON} | jq ".id" )
-PENDING_OBJECT_ID=$( echo ${PENDING_TRANSACTION_JSON} | jq ".object_id" )
-PENDING_COMMAND=$( echo ${PENDING_TRANSACTION_JSON} | jq ".command" )
+PENDING_TRANSACTION_ID=$( echo ${PENDING_TRANSACTION_JSON} | jq -r ".id" )
+PENDING_OBJECT_ID=$( echo ${PENDING_TRANSACTION_JSON} | jq -r ".object_id" )
+PENDING_COMMAND=$( echo ${PENDING_TRANSACTION_JSON} | jq -r ".command" )
 
 echo "AGENT($BASHPID): TX_ID(${PENDING_TRANSACTION_ID}) OBJECT_ID(${PENDING_OBJECT_ID}) COMMAND(${PENDING_COMMAND})"
 until [[ ! -z "${PENDING_ACCOUNT_ADDRESS}" ]]
 do
 
   PENDING_TRANSACTION_ACCOUNT_JSON=$( psql $DATABASE_URL -c 'select signer.CLAIM_INTERNAL_ACCOUNT($1);' --no-align -t)
-  PENDING_ACCOUNT_ADDRESS=$( echo ${PENDING_TRANSACTION_ACCOUNT_JSON} | jq '.address' )
+  PENDING_ACCOUNT_ADDRESS=$( echo ${PENDING_TRANSACTION_ACCOUNT_JSON} | jq -r '.address' )
 
   if [ -z "${PENDING_ACCOUNT_ADDRESS}" ]; then
     echo "AGENT($BASHPID): Heading to the breakroom, unable to find an account"
@@ -34,7 +34,7 @@ do
   fi
 done
 
-PENDING_ACCOUNT_ID=$( echo ${PENDING_TRANSACTION_ACCOUNT_JSON} | jq '.id' )
+PENDING_ACCOUNT_ID=$( echo ${PENDING_TRANSACTION_ACCOUNT_JSON} | jq -r '.id' )
 echo "AGENT($BASHPID): Account ${PENDING_ACCOUNT_ID} ${PENDING_ACCOUNT_ADDRESS}"
 
 PENDING_ACCOUNT_NAME="account_${PENDING_ACCOUNT_ADDRESS}"
