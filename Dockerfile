@@ -58,9 +58,12 @@ RUN mkdir /var/structs && \
     mkdir /var/structs/chain && \
     mkdir /var/structs/accounts && \
     mkdir /var/structs/tsa && \
-    mkdir /var/structs/tsa/tmp
+    mkdir /var/structs/tsa/tmp && \
+    mkdir /root/.structs && \
+    mkdir /root/.structs/config
 
 COPY config/client.toml /var/structs/chain/config/client.toml
+COPY config/client.toml /root/.structs/config/client.toml
 
 ENV PATH="$PATH:/var/structs/bin"
 
