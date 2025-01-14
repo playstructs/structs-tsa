@@ -18,6 +18,8 @@ do
     else
         sleep $TRANSACTION_MANAGER_SLEEP
     fi
+  else
+    sleep $TRANSACTION_MANAGER_SLEEP
   fi
 
 done
