@@ -25,7 +25,7 @@ echo "AGENT($BASHPID): TX_ID(${PENDING_TRANSACTION_ID}) OBJECT_ID(${PENDING_OBJE
 until [[ ! -z "${PENDING_ACCOUNT_ADDRESS}" ]]
 do
 
-  PENDING_TRANSACTION_ACCOUNT_JSON=$( psql -c 'select signer.CLAIM_INTERNAL_ACCOUNT($1);' --no-align -t)
+  PENDING_TRANSACTION_ACCOUNT_JSON=$( psql $DATABASE_URL -c 'select signer.CLAIM_INTERNAL_ACCOUNT($1);' --no-align -t)
   PENDING_ACCOUNT_ADDRESS=$( echo ${PENDING_TRANSACTION_ACCOUNT_JSON} | jq '.address' )
 
   if [ -z "${PENDING_ACCOUNT_ADDRESS}" ]; then
@@ -62,5 +62,5 @@ echo "AGENT($BASHPID): ${BROADCAST_RESULT}"
 
 #psql -c 'select signer.TRANSACTION_ERROR(transaction_id INTEGER, transaction_error TEXT);' --no-align -t
 
-psql -c 'select signer.TRANSACTION_BROADCAST_RESULTS(${PENDING_TRANSACTION_ID}, ${BROADCAST_RESULT});' --no-align -t
+psql $DATABASE_URL -c 'select signer.TRANSACTION_BROADCAST_RESULTS(${PENDING_TRANSACTION_ID}, ${BROADCAST_RESULT});' --no-align -t
 

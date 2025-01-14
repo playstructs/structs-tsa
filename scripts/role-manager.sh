@@ -7,7 +7,7 @@ echo "Loading TSA Role Manager"
 
 while :
 do
-  STUB_ROLE=$(psql -c 'select signer.CLAIM_ROLE_STUB();' --no-align -t)
+  STUB_ROLE=$(psql $DATABASE_URL -c 'select signer.CLAIM_ROLE_STUB();' --no-align -t)
   STUB_ROLE_ID=$(echo $STUB_ROLE | jq -r '.id')
 
   if [[ ! -z "${STUB_ROLE_ID}" ]]; then

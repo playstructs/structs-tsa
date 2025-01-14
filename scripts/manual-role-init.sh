@@ -25,7 +25,7 @@ then
     read -r GUILD_ID
 
     # select id from structs.guild where id = $guild_id
-    CHECK_GUILD_ID=$(psql -c "SELECT id FROM structs.guild WHERE id = '$GUILD_ID';" --no-align -t)
+    CHECK_GUILD_ID=$(psql $DATABASE_URL -c "SELECT id FROM structs.guild WHERE id = '$GUILD_ID';" --no-align -t)
 
     if [[ "$GUILD_ID" == "$CHECK_GUILD_ID" ]]
     then
@@ -66,7 +66,7 @@ ACCOUNT_ADDRESS=$(structsd keys show "$TEMP_NAME" | jq -r ".address" )
 # Loop / Check the database to find the ID of the primary internal role
 until [ -e /var/structs/tsa/role ]
 do
-  NEW_ROLE_ID=$(psql -c "SELECT player_id FROM player_address WHERE address = '${ACCOUNT_ADDRESS}';" --no-align -t)
+  NEW_ROLE_ID=$(psql $DATABASE_URL -c "SELECT player_id FROM player_address WHERE address = '${ACCOUNT_ADDRESS}';" --no-align -t)
   if [[ "$NEW_ROLE_ID" != "" ]]
   then
     echo $NEW_ROLE_ID > /var/structs/tsa/role
@@ -74,7 +74,7 @@ do
 done
 
 # Add the account to the database
-NEW_ACCOUNT=$(psql -c "SELECT signer.LOAD_INTERNAL_ACCOUNTS('[{\"address\":\"${ACCOUNT_ADDRESS}\"}]','${NEW_ROLE_ID}');" --no-align -t)
+NEW_ACCOUNT=$(psql $DATABASE_URL -c "SELECT signer.LOAD_INTERNAL_ACCOUNTS('[{\"address\":\"${ACCOUNT_ADDRESS}\"}]','${NEW_ROLE_ID}');" --no-align -t)
 
 # rename the account to the role account id
 structsd keys rename $TEMP_NAME account_$ACCOUNT_ADDRESS

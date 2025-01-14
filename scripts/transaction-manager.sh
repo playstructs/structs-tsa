@@ -6,7 +6,7 @@ TRANSACTION_MANAGER_SLEEP=30
 
 while :
 do
-  PENDING_TRANSACTION=$(psql -c 'select signer.CLAIM_INTERNAL_TRANSACTION();' --no-align -t)
+  PENDING_TRANSACTION=$(psql $DATABASE_URL -c 'select signer.CLAIM_INTERNAL_TRANSACTION();' --no-align -t)
   PENDING_TX_ID=$(echo $PENDING_TRANSACTION | jq -r '.id')
 
   if [[ ! -z "${PENDING_TX_ID}" ]]; then

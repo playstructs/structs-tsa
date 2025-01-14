@@ -41,15 +41,15 @@ SIGNED_ADDRESS_REGISTER_SIGNATURE=$( echo ${SIGNED_ADDRESS_REGISTER_JSON} | jq "
 
 
 # TODO: Fix this permission issue at the end.
-psql -c "signer.UPDATE_PENDING_ACCOUNT('${STUB_ACCOUNT_ID}','${STUB_ACCOUNT_PLAYER_ID}', '${ACCOUNT_ADDRESS}', '${SIGNED_ADDRESS_REGISTER_PUBKEY}', '${SIGNED_ADDRESS_REGISTER_SIGNATURE}', 127);" --no-align -t
+psql $DATABASE_URL -c "signer.UPDATE_PENDING_ACCOUNT('${STUB_ACCOUNT_ID}','${STUB_ACCOUNT_PLAYER_ID}', '${ACCOUNT_ADDRESS}', '${SIGNED_ADDRESS_REGISTER_PUBKEY}', '${SIGNED_ADDRESS_REGISTER_SIGNATURE}', 127);" --no-align -t
 
 # Wait for the address to show up in the permissions table
 until [ $ADDRESS_COUNT -gt 0 ];
 do
   sleep $ACCOUNT_AGENT_SLEEP
-  ADDRESS_COUNT=$( psql -c "select count(1) from structs.permission WHERE object_index = '${ACCOUNT_ADDRESS}';" --no-align -t)
+  ADDRESS_COUNT=$( psql $DATABASE_URL -c "select count(1) from structs.permission WHERE object_index = '${ACCOUNT_ADDRESS}';" --no-align -t)
 done
 
-psql -c "UPDATE signer.account SET status='available' WHERE address = '${ACCOUNT_ADDRESS}';" --no-align -t
+psql $DATABASE_URL -c "UPDATE signer.account SET status='available' WHERE address = '${ACCOUNT_ADDRESS}';" --no-align -t
 
 

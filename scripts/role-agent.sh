@@ -39,22 +39,22 @@ SIGNED_PROXY_SIGNATURE=$( echo ${SIGNED_PROXY_JSON} | jq ".signature" )
 echo "ROLE AGENT($BASHPID): Signature for Role Proxy Join ${ACCOUNT_ADDRESS} ${SIGNED_PROXY_PUBKEY} ${SIGNED_PROXY_SIGNATURE}"
 
 # Set the primary address of the pending internal account
-psql -c "SELECT signer.SET_PLAYER_INTERNAL_PENDING_PRIMARY_ADDRESS('${STUB_ROLE_ID}','${ACCOUNT_ADDRESS}');" --no-align -t
+psql $DATABASE_URL -c "SELECT signer.SET_PLAYER_INTERNAL_PENDING_PRIMARY_ADDRESS('${STUB_ROLE_ID}','${ACCOUNT_ADDRESS}');" --no-align -t
 
 # Setup the Pending account
-psql -c "SELECT signer.CREATE_PENDING_ACCOUNT_FROM_ROLE('${STUB_ROLE_ID}','${ACCOUNT_ADDRESS}');" --no-align -t
+psql $DATABASE_URL -c "SELECT signer.CREATE_PENDING_ACCOUNT_FROM_ROLE('${STUB_ROLE_ID}','${ACCOUNT_ADDRESS}');" --no-align -t
 
 
 # Create a Join Proxy message for the new account
 # 16 represents the Association permission needed on the guild object
-NEW_ROLE_TRANSACTION_JSON=$(psql -c "SELECT signer.CREATE_TRANSACTION('${STUB_ROLE_GUILD_ID}',16,'guild-membership-join-proxy',jsonb_build_array('${ACCOUNT_ADDRESS}','${SIGNED_PROXY_PUBKEY}','${SIGNED_PROXY_SIGNATURE}'),'{}');" --no-align -t)
+NEW_ROLE_TRANSACTION_JSON=$(psql $DATABASE_URL -c "SELECT signer.CREATE_TRANSACTION('${STUB_ROLE_GUILD_ID}',16,'guild-membership-join-proxy',jsonb_build_array('${ACCOUNT_ADDRESS}','${SIGNED_PROXY_PUBKEY}','${SIGNED_PROXY_SIGNATURE}'),'{}');" --no-align -t)
 
 
 # Wait for the address to show up in the permissions table
 until [ $ADDRESS_COUNT -gt 0 ];
 do
   sleep $ROLE_AGENT_SLEEP
-  ADDRESS_COUNT=$( psql -c "select count(1) from structs.permission WHERE object_index = '${ACCOUNT_ADDRESS}';" --no-align -t)
+  ADDRESS_COUNT=$( psql $DATABASE_URL -c "select count(1) from structs.permission WHERE object_index = '${ACCOUNT_ADDRESS}';" --no-align -t)
 done
 
-psql -c "UPDATE signer.account SET status='available' WHERE address = '${ACCOUNT_ADDRESS}';" --no-align -t
+psql $DATABASE_URL -c "UPDATE signer.account SET status='available' WHERE address = '${ACCOUNT_ADDRESS}';" --no-align -t
