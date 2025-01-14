@@ -17,30 +17,20 @@ then
   TEMP_NAME=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c10)
   MNEMONIC=$(structsd keys add "$TEMP_NAME" | jq ".mnemonic")
 
+  # Get the address of what was just added
+  ACCOUNT_ADDRESS=$(structsd keys show "$TEMP_NAME" | jq -r ".address" )
 
-  until [ -e /var/structs/tsa/guild ]
-  do
-
-    echo "What is the Guild ID for the new Role? (ex 0-3): "
-    read -r GUILD_ID
-
-    # select id from structs.guild where id = $guild_id
-    CHECK_GUILD_ID=$(psql $DATABASE_URL -c "SELECT id FROM structs.guild WHERE id = '$GUILD_ID';" --no-align -t)
-
-    if [[ "$GUILD_ID" == "$CHECK_GUILD_ID" ]]
-    then
-      echo ${GUILD_ID} > /var/structs/tsa/guild
-    else
-      echo "ERROR: Guild not found..."
-    fi
-  done
+  echo "What is the Guild ID for the new Role? (ex 0-3): "
+  read -r GUILD_ID
 
   # TSA sign a proxy-join message
-  SIGNED_PROXY=$(structs-sign-proxy ${GUILD_ID} 0 "$MNEMONIC")
+  SIGNED_PROXY_JSON=$(structs-sign-proxy guild-join ${GUILD_ID} 0 "$MNEMONIC")
+  SIGNED_PROXY_PUBKEY=$( echo ${SIGNED_PROXY_JSON} | jq ".pubkey" )
+  SIGNED_PROXY_SIGNATURE=$( echo ${SIGNED_PROXY_JSON} | jq ".signature" )
+
   echo "Generating Signature for TX..."
-  echo ""
-  echo $SIGNED_PROXY
-  echo ""
+  echo "${ACCOUNT_ADDRESS} ${SIGNED_PROXY_PUBKEY} ${SIGNED_PROXY_SIGNATURE}"
+
 
   echo "Paste that somewhere good then press [enter] "
   echo "(and by somewhere good, we mean proxy-join.sh on your validator)"
@@ -58,37 +48,25 @@ else
   TEMP_NAME=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c10)
   echo "$MNEMONIC" | structsd keys add "$TEMP_NAME" --recover
 
+  # Get the address of what was just added
+  ACCOUNT_ADDRESS=$(structsd keys show "$TEMP_NAME" | jq -r ".address" )
+
 fi
-
-# Get the address of what was just added
-ACCOUNT_ADDRESS=$(structsd keys show "$TEMP_NAME" | jq -r ".address" )
-
-# Loop / Check the database to find the ID of the primary internal role
-until [ -e /var/structs/tsa/role ]
-do
-  NEW_ROLE_ID=$(psql $DATABASE_URL -c "SELECT player_id FROM player_address WHERE address = '${ACCOUNT_ADDRESS}';" --no-align -t)
-  if [[ "$NEW_ROLE_ID" != "" ]]
-  then
-    echo $NEW_ROLE_ID > /var/structs/tsa/role
-  fi
-done
-
-# Add the account to the database
-NEW_ACCOUNT=$(psql $DATABASE_URL -c "SELECT signer.LOAD_INTERNAL_ACCOUNTS('[{\"address\":\"${ACCOUNT_ADDRESS}\"}]','${NEW_ROLE_ID}');" --no-align -t)
 
 # rename the account to the role account id
 structsd keys rename $TEMP_NAME account_$ACCOUNT_ADDRESS
 
-touch /var/structs/tsa/ready
+# Add the Role to the database
+NEW_ACCOUNT=$(psql $DATABASE_URL -c "SELECT signer.CREATE_SYSTEM_ROLE('DRONE' || structs.random_human_string(5),'${GUILD_ID}','${ACCOUNT_ADDRESS}');" --no-align -t)
 
-# Create signing accounts
-# AGENT_TARGET_NUMBER
-# Loop until accounts goal
-  # generate key
-  # create the signature
-  # submit signature
-  # loop until there
-  # add account to the database
+# Wait for the address to show up in the permissions table
+until [ $ADDRESS_COUNT -gt 0 ];
+do
+  sleep 10
+  ADDRESS_COUNT=$( psql $DATABASE_URL -c "select count(1) from structs.permission WHERE object_index = '${ACCOUNT_ADDRESS}';" --no-align -t)
+done
+
+psql $DATABASE_URL -c "UPDATE signer.account SET status='available' WHERE address = '${ACCOUNT_ADDRESS}';" --no-align -t
 
 
 
