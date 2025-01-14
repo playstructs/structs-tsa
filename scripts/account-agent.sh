@@ -8,7 +8,7 @@ CLIENT_FLAGS="--gas auto --yes=true"
   # Great work! Keep this up and you'll be promoted to Senior Signer
 
 # Look for the account json blob in the tmp folder
-if [[ -f "/var/structs/tsa/tmp/account_${1}.json" ]]; then
+if [[ ! -f "/var/structs/tsa/tmp/account_${1}.json" ]]; then
   echo "ACCOUNT AGENT($BASHPID): I can't work under these conditions! Where the heck is my account ${1} "
   exit
 fi

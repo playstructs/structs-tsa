@@ -6,7 +6,7 @@ CLIENT_FLAGS="--gas auto --yes=true"
 
 
 # Look for the role json blob in the tmp folder
-if [[ -f "/var/structs/tsa/tmp/role_${1}.json" ]]; then
+if [[ ! -f "/var/structs/tsa/tmp/role_${1}.json" ]]; then
   echo "ROLE AGENT($BASHPID): I can't work under these conditions! Where the heck is my role ${1} "
   exit
 fi
