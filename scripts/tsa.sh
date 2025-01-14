@@ -1,14 +1,22 @@
 #!/usr/bin/env bash
 
 STAT_SLEEP=20
+ROLE_WAIT_SLEEP=20
 
 echo "Loading The TSA"
 
 bash /src/structs/role-manager.sh &
 
-bash /src/structs/transaction-manager.sh &
-
 bash /src/structs/account-manager.sh &
+
+ROLE_COUNT=0
+until [ $ROLE_COUNT -gt 0 ];
+do
+  sleep $ROLE_WAIT_SLEEP
+  ROLE_COUNT=$( psql $DATABASE_URL -c "select count(1) from signer.role WHERE status = 'ready';" --no-align -t)
+done
+
+bash /src/structs/transaction-manager.sh &
 
 while :
 do

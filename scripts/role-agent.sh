@@ -50,6 +50,7 @@ psql $DATABASE_URL -c "SELECT signer.CREATE_PENDING_ACCOUNT_FROM_ROLE('${STUB_RO
 NEW_ROLE_TRANSACTION_JSON=$(psql $DATABASE_URL -c "SELECT signer.CREATE_TRANSACTION('${STUB_ROLE_GUILD_ID}',16,'guild-membership-join-proxy',jsonb_build_array('${ACCOUNT_ADDRESS}','${SIGNED_PROXY_PUBKEY}','${SIGNED_PROXY_SIGNATURE}'),'{}');" --no-align -t)
 
 
+ADDRESS_COUNT=0
 # Wait for the address to show up in the permissions table
 until [ $ADDRESS_COUNT -gt 0 ];
 do
