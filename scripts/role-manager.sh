@@ -10,7 +10,7 @@ do
   STUB_ROLE=$(psql $DATABASE_URL -c 'select signer.CLAIM_ROLE_STUB();' --no-align -t)
   STUB_ROLE_ID=$(echo $STUB_ROLE | jq -r '.id')
 
-  if [[ ! -z "${STUB_ROLE_ID}" ]]; then
+  if [ "$STUB_ROLE_ID" != "null" ];then
     echo $STUB_ROLE > /var/structs/tsa/tmp/role_${STUB_ROLE_ID}.json
 
     echo "Launching Agent Minion for Role Generation ${STUB_ROLE_ID}"
