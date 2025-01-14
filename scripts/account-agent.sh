@@ -31,7 +31,7 @@ MNEMONIC=$(structsd keys add "$TEMP_NAME" | jq -r ".mnemonic")
 ACCOUNT_ADDRESS=$(structsd keys show "$TEMP_NAME" | jq -r ".address" )
 
 # rename the account to the role account id
-structsd keys rename $TEMP_NAME account_$ACCOUNT_ADDRESS
+structsd keys rename $TEMP_NAME account_$ACCOUNT_ADDRESS --yes
 
 # TSA sign an address-register message
 echo "ACCOUNT AGENT($BASHPID): Generating Signature for Address Register"

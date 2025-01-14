@@ -54,12 +54,13 @@ else
 fi
 
 # rename the account to the role account id
-structsd keys rename $TEMP_NAME account_$ACCOUNT_ADDRESS
+structsd keys rename $TEMP_NAME account_$ACCOUNT_ADDRESS --yes
 
 # Add the Role to the database
 NEW_ACCOUNT=$(psql $DATABASE_URL -c "SELECT signer.CREATE_SYSTEM_ROLE('DRONE' || structs.random_human_string(5),'${GUILD_ID}','${ACCOUNT_ADDRESS}');" --no-align -t)
 
 # Wait for the address to show up in the permissions table
+ADDRESS_COUNT=0
 until [ $ADDRESS_COUNT -gt 0 ];
 do
   sleep 10

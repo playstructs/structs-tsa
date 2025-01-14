@@ -29,7 +29,7 @@ MNEMONIC=$(structsd keys add "$TEMP_NAME" | jq -r ".mnemonic")
 ACCOUNT_ADDRESS=$(structsd keys show "$TEMP_NAME" | jq -r ".address" )
 
 # rename the account to the role account id
-structsd keys rename $TEMP_NAME account_$ACCOUNT_ADDRESS
+structsd keys rename $TEMP_NAME account_$ACCOUNT_ADDRESS --yes
 
 # TSA sign a proxy-join message
 SIGNED_PROXY_JSON=$(structs-sign-proxy guild-join ${STUB_ROLE_GUILD_ID} 0 "$MNEMONIC")
