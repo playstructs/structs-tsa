@@ -16,13 +16,13 @@ fi
 # Extract details from the JSON blob into variables
 echo "ACCOUNT AGENT($BASHPID): Reviewing Account Details"
 
-STUB_ACCOUNT_JSON=$(cat /var/structs/tsa/tmp/tx_$1.json)
+STUB_ACCOUNT_JSON=$(cat /var/structs/tsa/tmp/account_$1.json)
 STUB_ACCOUNT_ID=$( echo ${STUB_ACCOUNT_JSON} | jq -r ".id" )
 STUB_ACCOUNT_ROLE_ID=$( echo ${STUB_ACCOUNT_JSON} | jq -r ".role_id" )
 STUB_ACCOUNT_PLAYER_ID=$( echo ${STUB_ACCOUNT_JSON} | jq -r ".player_id" )
 
 
-echo "Adding Mnemonic to the shared keychain"
+echo "ACCOUNT AGENT($BASHPID): Adding Mnemonic to the shared keychain"
 TEMP_NAME=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c10)
 MNEMONIC=$(structsd keys add "$TEMP_NAME" | jq -r ".mnemonic")
 
@@ -40,8 +40,9 @@ SIGNED_ADDRESS_REGISTER_PUBKEY=$( echo ${SIGNED_ADDRESS_REGISTER_JSON} | jq -r "
 SIGNED_ADDRESS_REGISTER_SIGNATURE=$( echo ${SIGNED_ADDRESS_REGISTER_JSON} | jq -r ".signature" )
 
 
+echo "ACCOUNT AGENT($BASHPID): '${STUB_ACCOUNT_ID}','${STUB_ACCOUNT_PLAYER_ID}', '${ACCOUNT_ADDRESS}', '${SIGNED_ADDRESS_REGISTER_PUBKEY}', '${SIGNED_ADDRESS_REGISTER_SIGNATURE}'"
 # TODO: Fix this permission issue at the end.
-psql $DATABASE_URL -c "signer.UPDATE_PENDING_ACCOUNT('${STUB_ACCOUNT_ID}','${STUB_ACCOUNT_PLAYER_ID}', '${ACCOUNT_ADDRESS}', '${SIGNED_ADDRESS_REGISTER_PUBKEY}', '${SIGNED_ADDRESS_REGISTER_SIGNATURE}', 127);" --no-align -t
+psql $DATABASE_URL -c "SELECT signer.UPDATE_PENDING_ACCOUNT('${STUB_ACCOUNT_ID}','${STUB_ACCOUNT_PLAYER_ID}', '${ACCOUNT_ADDRESS}', '${SIGNED_ADDRESS_REGISTER_PUBKEY}', '${SIGNED_ADDRESS_REGISTER_SIGNATURE}', 127);" --no-align -t
 
 # Wait for the address to show up in the permissions table
 ADDRESS_COUNT=0
