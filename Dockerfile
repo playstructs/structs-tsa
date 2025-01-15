@@ -60,7 +60,8 @@ RUN mkdir /var/structs && \
     mkdir /var/structs/tsa && \
     mkdir /var/structs/tsa/tmp && \
     mkdir /root/.structs && \
-    mkdir /root/.structs/config
+    mkdir /root/.structs/config && \
+    ln -s /var/structs/accounts /root/.structs/keyring-test
 
 COPY config/client.toml /var/structs/chain/config/client.toml
 COPY config/client.toml /root/.structs/config/client.toml
