@@ -3,6 +3,8 @@
 # Variables
 ACCOUNT_MANAGER_SLEEP=30
 
+echo "ACCOUNT MANAGER($BASHPID): Management Online"
+
 while :
 do
   STUB_ACCOUNT_JSON=$(psql $DATABASE_URL -c 'select signer.GET_NEW_ACCOUNT();' --no-align -t)
@@ -12,7 +14,7 @@ do
     if [ "$STUB_ACCOUNT_ID" != "null" ]; then
       echo $STUB_ACCOUNT_JSON > /var/structs/tsa/tmp/account_${STUB_ACCOUNT_ID}.json
 
-      echo "Launching Agent Minion for Transaction ${STUB_ACCOUNT_ID}"
+      echo "ACCOUNT MANAGER($BASHPID): Launching Agent Minion for Transaction ${STUB_ACCOUNT_ID}"
       bash /src/structs/account-agent.sh "${STUB_ACCOUNT_ID}" &
     else
         sleep $ACCOUNT_MANAGER_SLEEP

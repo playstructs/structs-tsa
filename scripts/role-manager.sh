@@ -3,7 +3,7 @@
 # Variables
 ROLE_MANAGER_SLEEP=10
 
-echo "Loading TSA Role Manager"
+echo "ROLE MANAGER($BASHPID): Management Online"
 
 while :
 do
@@ -14,7 +14,7 @@ do
     if [ "$STUB_ROLE_ID" != "null" ];then
       echo $STUB_ROLE > /var/structs/tsa/tmp/role_${STUB_ROLE_ID}.json
 
-      echo "Launching Agent Minion for Role Generation ${STUB_ROLE_ID}"
+      echo "ROLE MANAGER($BASHPID): Launching Agent Minion for Role Generation ${STUB_ROLE_ID}"
       bash /src/structs/role-agent.sh "${STUB_ROLE_ID}" &
     else
         sleep $ROLE_MANAGER_SLEEP
