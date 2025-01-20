@@ -32,10 +32,6 @@ then
   echo "${ACCOUNT_ADDRESS} ${SIGNED_PROXY_PUBKEY} ${SIGNED_PROXY_SIGNATURE}"
 
 
-  echo "Paste that somewhere good then press [enter] "
-  echo "(and by somewhere good, we mean proxy-join.sh on your validator)"
-  read -r NOTHING_VARIABLE
-
 else
   echo "Importing a Role..."
 
