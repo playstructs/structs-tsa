@@ -15,7 +15,7 @@ fi
 # Extract details from the JSON blob into variables
 echo "ROLE AGENT($BASHPID): Reviewing Role Details"
 
-STUB_ROLE_JSON=$(cat /var/structs/tsa/tmp/tx_$1.json)
+STUB_ROLE_JSON=$(cat /var/structs/tsa/tmp/role_$1.json)
 STUB_ROLE_ID=$( echo ${STUB_ROLE_JSON} | jq -r ".id" )
 STUB_ROLE_GUILD_ID=$( echo ${STUB_ROLE_JSON} | jq -r ".guild_id" )
 
