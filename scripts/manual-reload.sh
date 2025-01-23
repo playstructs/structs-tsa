@@ -22,7 +22,7 @@ then
     ACCOUNT_NAME=$(echo ${PLANETS_BLOB} | jq -r ".[${p}].name")
     ACCOUNT_ADDRESS=$(echo ${PLANETS_BLOB} | jq -r ".[${p}].address")
 
-    if [[ $x == account_* ]]; then
+    if [[ $ACCOUNT_NAME == account_* ]]; then
       # Add the Role to the database
       echo "Loading ${ACCOUNT_NAME} ${ACCOUNT_ADDRESS}"
       psql $DATABASE_URL -c "SELECT signer.LOAD_ACCOUNT('${ACCOUNT_ADDRESS}');" --no-align -t
