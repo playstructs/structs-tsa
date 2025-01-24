@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-
 # $1 is Guild ID
 GUILD_ID=$1
 # $2 is Player ID
@@ -13,11 +12,9 @@ TEMP_NAME=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c10)
 MNEMONIC=$(structsd keys add "$TEMP_NAME" | jq -r ".mnemonic")
 echo "${MNEMONIC}"
 
-
 # Get the address of what was just added
 ACCOUNT_ADDRESS=$(structsd keys show "$TEMP_NAME" | jq -r ".address" )
 echo "${ACCOUNT_ADDRESS}"
-
 
 # Guild Join Message
 echo ""
