@@ -19,8 +19,8 @@ then
   for (( p=0; p<ACCOUNT_COUNT; p++ ))
   do
 
-    ACCOUNT_NAME=$(echo ${PLANETS_BLOB} | jq -r ".[${p}].name")
-    ACCOUNT_ADDRESS=$(echo ${PLANETS_BLOB} | jq -r ".[${p}].address")
+    ACCOUNT_NAME=$(echo ${WALLET_JSON} | jq -r ".[${p}].name")
+    ACCOUNT_ADDRESS=$(echo ${WALLET_JSON} | jq -r ".[${p}].address")
 
     if [[ $ACCOUNT_NAME == account_* ]]; then
       # Add the Role to the database
