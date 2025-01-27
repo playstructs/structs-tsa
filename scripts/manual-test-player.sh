@@ -18,7 +18,7 @@ echo "${ACCOUNT_ADDRESS}"
 
 # Guild Join Message
 echo ""
-echo "Creating Guild Proxy Join Message/Signature>"
+echo "Creating Guild Proxy Join Message/Signature"
 SIGNED_PROXY_JSON=$(structs-sign-proxy guild-join ${GUILD_ID} 0 "$MNEMONIC")
 SIGNED_PROXY_PUBKEY=$( echo ${SIGNED_PROXY_JSON} | jq -r ".pubkey" )
 SIGNED_PROXY_SIGNATURE=$( echo ${SIGNED_PROXY_JSON} | jq -r ".signature" )
