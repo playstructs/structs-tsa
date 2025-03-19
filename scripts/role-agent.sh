@@ -54,11 +54,21 @@ echo "ROLE AGENT($BASHPID): Updating Account record"
 psql $DATABASE_URL -c "SELECT signer.CREATE_PENDING_ACCOUNT_FROM_ROLE('${STUB_ROLE_ID}','${ACCOUNT_ADDRESS}');" --no-align -t
 
 
-# Create a Join Proxy message for the new account
-# 16 represents the Association permission needed on the guild object
-echo "ROLE AGENT($BASHPID): Adding pending Transaction for Guild Join Proxy of ${ACCOUNT_ADDRESS} to ${STUB_ROLE_GUILD_ID}"
-NEW_ROLE_TRANSACTION_JSON=$(psql $DATABASE_URL -c "SELECT signer.CREATE_TRANSACTION('${STUB_ROLE_GUILD_ID}',16,'guild-membership-join-proxy',jsonb_build_array('${ACCOUNT_ADDRESS}','${SIGNED_PROXY_PUBKEY}','${SIGNED_PROXY_SIGNATURE}'),'{}');" --no-align -t)
 
+## Check to see if a role is available on the guild for proxy join
+ROLE_COUNT=$(psql $DATABASE_URL -c "select count(1) from structs.permission where object_type = 'guild' and object_id = '${STUB_ROLE_GUILD_ID}' and player_id in (select player_id from signer.role);" --no-align -t)
+
+if [ $ROLE_COUNT -gt 0 ]; then
+  # Create a Join Proxy message for the new account
+  # 16 represents the Association permission needed on the guild object
+  echo "ROLE AGENT($BASHPID): Adding pending Transaction for Guild Join Proxy of ${ACCOUNT_ADDRESS} to ${STUB_ROLE_GUILD_ID}"
+  NEW_ROLE_TRANSACTION_JSON=$(psql $DATABASE_URL -c "SELECT signer.CREATE_TRANSACTION('${STUB_ROLE_GUILD_ID}',16,'guild-membership-join-proxy',jsonb_build_array('${ACCOUNT_ADDRESS}','${SIGNED_PROXY_PUBKEY}','${SIGNED_PROXY_SIGNATURE}'),'{}');" --no-align -t)
+else
+  # Save the Proxy Join Message Details Elsewhere
+  # 16 represents the Association permission needed on the guild object
+  echo "ROLE AGENT($BASHPID): Adding message details  Guild Join Proxy of ${ACCOUNT_ADDRESS} to ${STUB_ROLE_GUILD_ID}"
+  psql $DATABASE_URL -c "SELECT structs.SET_PLAYER_INTERNAL_PENDING_PROXY('${STUB_ROLE_GUILD_ID}','${ACCOUNT_ADDRESS}','${SIGNED_PROXY_PUBKEY}','${SIGNED_PROXY_SIGNATURE}');" --no-align -t
+fi
 
 echo "ROLE AGENT($BASHPID): Waiting for activation...."
 ADDRESS_COUNT=0
