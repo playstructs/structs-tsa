@@ -10,7 +10,7 @@ ROLE_COUNT=0
 until [ $ROLE_COUNT -gt 0 ];
 do
   sleep $ROLE_WAIT_SLEEP
-  ROLE_COUNT=$( psql $DATABASE_URL -c "select count(1) from signer.role WHERE status = 'ready';" --no-align -t)
+  ROLE_COUNT=$( psql $DATABASE_URL -c "select count(1) from signer.role;" --no-align -t)
 done
 
 bash /src/structs/role-manager.sh &
