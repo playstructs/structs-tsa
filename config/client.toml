@@ -1,5 +1,5 @@
 broadcast-mode = "sync"
-chain-id = "structstestnet-105"
+chain-id = "structstestnet-106"
 keyring-backend = "test"
 keyring-dir = "/var/structs/accounts"
 node = "tcp://structsd:26657"
