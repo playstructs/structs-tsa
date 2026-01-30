@@ -6,7 +6,7 @@ LABEL maintainer="Slow Ninja <info@slow.ninja>"
 
 # Variables
 ENV DEBIAN_FRONTEND=noninteractive \
-      NETWORK_VERSION="106b" \
+      NETWORK_VERSION="107b" \
       AGENT_TARGET_NUMBER=20
 
 # Install packages
@@ -17,12 +17,17 @@ RUN apt-get update && \
         git \
         curl \
         wget \
-        golang \
+       # golang \
         nodejs \
         npm \
         jq
 
+# Install Go 1.24.1
+RUN curl -LO https://go.dev/dl/go1.24.1.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz && \
+    rm go1.24.1.linux-amd64.tar.gz
 
+ENV PATH="/usr/local/go/bin:/root/go/bin:${PATH}"
 
 RUN  sed -i "s/read enter//g" /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
 RUN  cat /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh && \
