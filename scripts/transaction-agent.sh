@@ -23,10 +23,12 @@ PENDING_TRANSACTION_ID=$( echo ${PENDING_TRANSACTION_JSON} | jq -r ".id" )
 PENDING_OBJECT_ID=$( echo ${PENDING_TRANSACTION_JSON} | jq -r ".object_id" )
 PENDING_MODULE=$( echo ${PENDING_TRANSACTION_JSON} | jq -r ".module" )
 PENDING_COMMAND=$( echo ${PENDING_TRANSACTION_JSON} | jq -r ".command" )
-PENDING_ARGS=$(echo ${PENDING_TRANSACTION_JSON} | jq -r '.args | to_entries[] | "\(.value)"' |  tr '\n' ' ')
-PENDING_FLAGS=$(echo ${PENDING_TRANSACTION_JSON} | jq -r '.flags | to_entries[] | "--\(.key) \(.value)"' |  tr '\n' ' ')
+# Build args and flags as arrays so each value is passed as exactly one argument,
+# regardless of whether it contains spaces (e.g. JSON values like {"theme":"dark mode"}).
+mapfile -t TX_ARGS  < <(echo "${PENDING_TRANSACTION_JSON}" | jq -r '.args[]')
+mapfile -t TX_FLAGS < <(echo "${PENDING_TRANSACTION_JSON}" | jq -r '.flags | to_entries[] | ("--" + .key), (.value | tostring)')
 
-echo "TX AGENT($BASHPID): TX_ID(${PENDING_TRANSACTION_ID}) OBJECT_ID(${PENDING_OBJECT_ID}) MODULE(${PENDING_MODULE}) COMMAND(${PENDING_COMMAND}) PENDING_ARGS(${PENDING_ARGS}) PENDING_FLAGS(${PENDING_FLAGS})"
+echo "TX AGENT($BASHPID): TX_ID(${PENDING_TRANSACTION_ID}) OBJECT_ID(${PENDING_OBJECT_ID}) MODULE(${PENDING_MODULE}) COMMAND(${PENDING_COMMAND}) PENDING_ARGS(${TX_ARGS[*]}) PENDING_FLAGS(${TX_FLAGS[*]})"
 
 echo "TX AGENT($BASHPID): Transaction ${PENDING_TRANSACTION_ID} searching for signing Account..."
 while [[ -z "${PENDING_ACCOUNT_ADDRESS}" ]] || [ "$PENDING_ACCOUNT_ADDRESS" == "null" ]
@@ -47,15 +49,16 @@ echo "TX AGENT($BASHPID): Account ${PENDING_ACCOUNT_ID} ${PENDING_ACCOUNT_ADDRES
 PENDING_ACCOUNT_NAME="account_${PENDING_ACCOUNT_ADDRESS}"
 
 
-echo "TX AGENT($BASHPID): Signing.... structsd tx ${PENDING_MODULE} ${PENDING_COMMAND} ${PENDING_ARGS} ${PENDING_FLAGS} --from ${PENDING_ACCOUNT_NAME} ${CLIENT_FLAGS}"
-BROADCAST_RESULT=$(structsd tx ${PENDING_MODULE} ${PENDING_COMMAND} ${PENDING_ARGS} ${PENDING_FLAGS} --from ${PENDING_ACCOUNT_NAME} ${CLIENT_FLAGS})
+# Keep ${CLIENT_FLAGS} unquoted on purpose so "--gas auto --yes=true" splits into separate flags.
+echo "TX AGENT($BASHPID): Signing.... structsd tx ${PENDING_MODULE} ${PENDING_COMMAND} ${TX_ARGS[*]} ${TX_FLAGS[*]} --from ${PENDING_ACCOUNT_NAME} ${CLIENT_FLAGS}"
+BROADCAST_RESULT=$(structsd tx "${PENDING_MODULE}" "${PENDING_COMMAND}" "${TX_ARGS[@]}" "${TX_FLAGS[@]}" --from "${PENDING_ACCOUNT_NAME}" ${CLIENT_FLAGS})
 
 echo "TX AGENT($BASHPID): ${BROADCAST_RESULT}"
 
 #psql -c 'select signer.TRANSACTION_ERROR(transaction_id INTEGER, transaction_error TEXT);' --no-align -t
 
 echo "TX AGENT($BASHPID): Updating transaction results"
-psql $DATABASE_URL -c "select signer.TRANSACTION_BROADCAST_RESULTS(${PENDING_TRANSACTION_ID}, '${BROADCAST_RESULT}');" --no-align -t
+psql "$DATABASE_URL" -v res="$BROADCAST_RESULT" -c "select signer.TRANSACTION_BROADCAST_RESULTS(${PENDING_TRANSACTION_ID}, :'res');" --no-align -t
 
 echo "TX AGENT($BASHPID): Sleeping for a bit..."
 sleep 10
