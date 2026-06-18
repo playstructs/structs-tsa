@@ -25,8 +25,8 @@ PENDING_MODULE=$( echo ${PENDING_TRANSACTION_JSON} | jq -r ".module" )
 PENDING_COMMAND=$( echo ${PENDING_TRANSACTION_JSON} | jq -r ".command" )
 # Build args and flags as arrays so each value is passed as exactly one argument,
 # regardless of whether it contains spaces (e.g. JSON values like {"theme":"dark mode"}).
-mapfile -t TX_ARGS  < <(echo "${PENDING_TRANSACTION_JSON}" | jq -r '.args[]')
-mapfile -t TX_FLAGS < <(echo "${PENDING_TRANSACTION_JSON}" | jq -r '.flags | to_entries[] | ("--" + .key), (.value | tostring)')
+mapfile -t TX_ARGS  < <(echo "${PENDING_TRANSACTION_JSON}" | jq -r '(.args  // [])[]')
+mapfile -t TX_FLAGS < <(echo "${PENDING_TRANSACTION_JSON}" | jq -r '(.flags // {}) | to_entries[] | ("--" + .key), (.value | tostring)')
 
 echo "TX AGENT($BASHPID): TX_ID(${PENDING_TRANSACTION_ID}) OBJECT_ID(${PENDING_OBJECT_ID}) MODULE(${PENDING_MODULE}) COMMAND(${PENDING_COMMAND}) PENDING_ARGS(${TX_ARGS[*]}) PENDING_FLAGS(${TX_FLAGS[*]})"
 
