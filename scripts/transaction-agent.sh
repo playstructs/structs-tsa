@@ -58,7 +58,7 @@ echo "TX AGENT($BASHPID): ${BROADCAST_RESULT}"
 #psql -c 'select signer.TRANSACTION_ERROR(transaction_id INTEGER, transaction_error TEXT);' --no-align -t
 
 echo "TX AGENT($BASHPID): Updating transaction results"
-psql "$DATABASE_URL" -v res="$BROADCAST_RESULT" -c "select signer.TRANSACTION_BROADCAST_RESULTS(${PENDING_TRANSACTION_ID}, :'res');" --no-align -t
+psql "$DATABASE_URL" -v res="$BROADCAST_RESULT" --no-align -t <<<"select signer.TRANSACTION_BROADCAST_RESULTS(${PENDING_TRANSACTION_ID}, :'res');"
 
 echo "TX AGENT($BASHPID): Sleeping for a bit..."
 sleep 10
