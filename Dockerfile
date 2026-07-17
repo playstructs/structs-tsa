@@ -6,7 +6,7 @@ LABEL maintainer="Slow Ninja <info@slow.ninja>"
 
 # Variables
 ENV DEBIAN_FRONTEND=noninteractive \
-      NETWORK_VERSION="115b" \
+      NETWORK_VERSION="116b" \
       AGENT_TARGET_NUMBER=20
 
 # Install packages
