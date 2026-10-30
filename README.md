@@ -42,6 +42,8 @@ Do not put credentials in logs, command-line arguments or copied diagnostics. Do
 
 The healthcheck requires a responsive supervisor, recent successful inventory reconciliation and at least one verified usable local key. An empty installation or a stack waiting for index/role registration stays unhealthy while reconciliation continues. Shutdown stops new claims and waits for bounded in-flight work; configure a **180-second stop grace period**. A forced stop remains recoverable, but does not prove a broadcast failed.
 
+The first guild onboarding request is processed automatically once the SQL index and native node satisfy the v0.22 readiness checks. An empty keyring does not require a seed command: the worker generates and retains that request's primary key. Without an existing authorized guild signer, it publishes the proof for approval through the existing external guild approval flow. The key becomes usable after registration is confirmed and indexed. Do not request a duplicate role to repair an existing pending request. `known:0` only describes the configured local keyring; check readiness, pending account state and the persistent volume mount before replacing or generating anything manually.
+
 ## Operator commands
 
 Run these in the candidate container with the same database configuration and persistent key volume. Every new key request requires an explicit permission mask.

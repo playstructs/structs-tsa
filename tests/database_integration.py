@@ -26,6 +26,7 @@ from tsa.accounts import Keys
 from tsa.durable import Journal, Volume
 from tsa.inventory import Inventory
 from tsa.rpc import Node, tx_hash
+from tsa.roles import Roles
 from tsa.signer import Cli, Lcd, Signer
 from tsa.store import Store
 from tsa.worker import Worker
@@ -113,6 +114,61 @@ class Handler(BaseHTTPRequestHandler):
         self.reply({'jsonrpc': '2.0', 'id': 'tsa', **({'error': error} if error else {'result': result})})
 
 
+def first_role_bootstrap(dsns, node, lcd):
+    # No operator-generated seed key: use the pending request created when a
+    # guild is indexed. Repeat after SQL loss with the same durable key volume.
+    with tempfile.TemporaryDirectory(prefix='tsa-first-role-test-') as root:
+        cli = Cli(home=root + '/home', keyring=root + '/keys')
+        keys = Keys(cli)
+        volume = Volume(cli.keyring)
+        address = None
+        previous_request = None
+        for dsn in dsns:
+            store = Store(dsn)
+            try:
+                with store.connection.transaction(force_rollback=True):
+                    store.connection.execute(Path('/schema/tests/fixtures/v022-signer.sql').read_text(), prepare=False)
+                    # No established guild signer exists on a first install.
+                    store.connection.execute('DELETE FROM signer.account')
+                    role_id = store.scalar("SELECT role_id FROM structs.player_internal_pending WHERE guild_id='0-990940'")
+                    store.connection.execute('SET LOCAL ROLE structs_tsa')
+                    inventory = Inventory(store, node, lcd, keys, volume, Journal(volume))
+                    expected = {'known': 0} if address is None else {'known': 1, 'unregistered': 1}
+                    assert inventory.run() == expected
+                    assert role_id in store.role_recovery()
+                    roles = Roles(store, node, lcd, keys, volume)
+                    assert roles.process(role_id) == 'waiting-external-proxy'
+                    request = store.prepare_role(role_id, Roles.PRIMARY_PERMISSIONS)
+                    assert request['external_requested'] and request['proxy_tx_id'] is None
+                    assert request['request_id'] != previous_request
+                    previous_request = request['request_id']
+                    if address is not None:
+                        assert request['address'] == address, 'SQL reconstruction replaced a surviving role key'
+                    address = request['address']
+                    assert len(keys.inventory()) == 1
+                    # Repeated processing and a reconstructed worker retain the
+                    # exact key/proof request and never broadcast the first role.
+                    restarted = Roles(store, node, lcd, Keys(cli), Volume(cli.keyring))
+                    assert restarted.process(role_id) == 'waiting-external-proxy'
+                    assert store.prepare_role(role_id, Roles.PRIMARY_PERMISSIONS) == request
+                    assert store.scalar('SELECT count(*) FROM signer.tx') == 0
+                    assert store.scalar('SELECT count(*) FROM signer.account') == 1
+                    Chain.owners[address] = ('1-990943', Roles.PRIMARY_PERMISSIONS)
+                    assert restarted.process(role_id) == 'waiting-confirmed-role'
+                    store.connection.execute('RESET ROLE')
+                    store.connection.execute("INSERT INTO structs.player(id,primary_address,guild_id) VALUES('1-990943',%s,'0-990940')", (address,))
+                    store.connection.execute("""INSERT INTO structs.permission(id,object_type,object_index,object_id,player_id,val)
+                        VALUES('8-' || %s || '@0','address',%s,'1-990943','1-990943',33554431)""", (address, address))
+                    store.connection.execute('SET LOCAL ROLE structs_tsa')
+                    assert restarted.process(role_id) == 'activated'
+                    assert inventory.run() == {'known': 1, 'ready': 1}
+                    assert restarted.process(role_id) == 'inactive'
+                    assert Chain.broadcasts == 0
+                Chain.owners.pop(address)
+            finally:
+                store.close()
+
+
 def main():
     if os.environ.get('TSA_DISPOSABLE_TEST') != 'v022-integration':
         raise RuntimeError('Disposable test acknowledgement is required')
@@ -126,6 +182,8 @@ def main():
     thread.start()
     url = 'http://127.0.0.1:' + str(server.server_port)
     try:
+        first_role_bootstrap((first_dsn, second_dsn), Node(url, Chain.chain_id), Lcd(url))
+        print('Fresh role: empty keyring, external approval, restart and SQL reconstruction passed', flush=True)
         with tempfile.TemporaryDirectory(prefix='tsa-database-test-') as root:
             cli = Cli(home=root + '/home', keyring=root + '/keys')
             keys = Keys(cli)
