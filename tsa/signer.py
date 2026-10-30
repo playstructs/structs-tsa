@@ -11,6 +11,7 @@ import urllib.error
 import urllib.request
 from urllib.parse import quote, urlsplit
 
+from .durable import private_directory
 from .rpc import NoRedirect, RpcError, decode_bytes, uint
 from .worker import InvalidRequest, PreparationUnavailable, Signed
 
@@ -61,8 +62,33 @@ class Cli:
         except (OSError, ValueError, subprocess.TimeoutExpired) as error:
             raise PreparationUnavailable('Signing command unavailable') from error
 
+    def keyring_base(self):
+        # The old image mounted the volume directly at $HOME/keyring-test via
+        # a symlink. --keyring-dir instead expects its PARENT directory. Keep
+        # those existing files in place, and also support already-created v022
+        # volumes whose records live in the normal nested keyring-test folder.
+        root = Path(self.keyring).resolve()
+        nested = root / 'keyring-test'
+
+        def has_records(path):
+            return path.is_dir() and any(item.is_file() and item.suffix in ('.info', '.address')
+                                        for item in path.iterdir())
+
+        if not has_records(root) or (nested.is_symlink() and nested.resolve() == root):
+            return self.keyring
+        if has_records(nested):
+            raise PreparationUnavailable('Both flat and nested keyrings contain keys; select one verified keyring layout')
+        base = private_directory(Path(self.home) / 'tsa-legacy-keyring')
+        link = base / 'keyring-test'
+        try:
+            link.symlink_to(root, target_is_directory=True)
+        except FileExistsError:
+            if not link.is_symlink() or link.resolve() != root:
+                raise PreparationUnavailable('Legacy keyring alias points at a different location')
+        return str(base)
+
     def flags(self):
-        return ['--home', self.home, '--keyring-dir', self.keyring, '--keyring-backend', 'test', '--output', 'json']
+        return ['--home', self.home, '--keyring-dir', self.keyring_base(), '--keyring-backend', 'test', '--output', 'json']
 
     def generate(self, tx, address, chain_id, timeout_height, gas, fees, account_number=0, sequence=0):
         # The current v022 SQL wrappers emit only direct Structs messages. Do

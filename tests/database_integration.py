@@ -185,9 +185,17 @@ def main():
         first_role_bootstrap((first_dsn, second_dsn), Node(url, Chain.chain_id), Lcd(url))
         print('Fresh role: empty keyring, external approval, restart and SQL reconstruction passed', flush=True)
         with tempfile.TemporaryDirectory(prefix='tsa-database-test-') as root:
+            # Match the pre-v022 image's actual volume layout. Both the Python
+            # inventory and the packaged daemon must find these keys in place.
+            legacy_home = Path(root) / 'legacy-home'
+            legacy_home.mkdir(mode=0o700)
+            key_directory = Path(root) / 'keys'
+            key_directory.mkdir(mode=0o700)
+            (legacy_home / 'keyring-test').symlink_to(key_directory, target_is_directory=True)
             cli = Cli(home=root + '/home', keyring=root + '/keys')
             keys = Keys(cli)
-            addresses = [cli.run(['structsd', 'keys', 'add', label, *cli.flags()])['address']
+            addresses = [cli.run(['structsd', 'keys', 'add', label, '--home', str(legacy_home),
+                                 '--keyring-backend', 'test', '--output', 'json'])['address']
                          for label in ('account_legacy', 'another-local-name', 'tsa_unknown')]
             Chain.owners = {addresses[0]: ('1-990940', 33554431), addresses[1]: ('1-990940', 16)}
             fixture = Path('/schema/tests/fixtures/v022-signer.sql').read_text()

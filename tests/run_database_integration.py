@@ -1,4 +1,5 @@
 """Create two isolated PG instances, migrate them, run real TSA recovery, clean up."""
+import argparse
 import json
 from pathlib import Path
 import subprocess
@@ -6,7 +7,11 @@ import time
 from uuid import uuid4
 
 root = Path(__file__).resolve().parent.parent
-schema = root.parent / 'structs-pg'
+parser = argparse.ArgumentParser()
+parser.add_argument('--schema', type=Path, default=root.parent / 'structs-pg')
+parser.add_argument('--image', default='structs-v022-tsa-candidate:development')
+args = parser.parse_args()
+schema = args.schema.resolve()
 label = subprocess.check_output(['docker', 'inspect', '--format', '{{index .Config.Labels "structs.task"}}', 'structs-v022-pg'], text=True).strip()
 if label != 'v022-integration':
     raise RuntimeError('Source PostgreSQL must carry the disposable-test label')
@@ -46,7 +51,7 @@ try:
         '-e', 'PYTHONPATH=/opt/tsa', '-e', 'TSA_DISPOSABLE_TEST=v022-integration',
         '-e', 'DATABASE_URL=postgres://structs@tsa-first:5432/structs',
         '-e', 'TSA_REBUILT_DATABASE_URL=postgres://structs@tsa-second:5432/structs',
-        '-w', '/workspace', '--entrypoint', 'python', 'structs-v022-tsa-candidate:development',
+        '-w', '/workspace', '--entrypoint', 'python', args.image,
         'tests/database_integration.py'], capture_output=True, text=True, timeout=240)
     print(result.stdout, end='')
     if result.returncode:
