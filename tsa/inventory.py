@@ -22,16 +22,21 @@ class Inventory:
             return {'known': len(keys), 'waiting-index': len(keys)}
         if self.node.call('abci_info', {}).get('response', {}).get('version') not in ('0.22.0', 'v0.22.0'):
             raise PreparationUnavailable('Key activation requires the verified v0.22.0 protocol')
-        height = uint(context['indexed_height'])
-        tip = self.node.height()
-        if context.get('chain_id') != self.node.chain_id or not height <= tip <= height + 5:
-            raise PreparationUnavailable('Local key recovery requires a current matching index')
         counts = {'known': len(keys)}
         for key in keys:
             if self.stopping():
                 break
             address = key['address']
             try:
+                # A large inventory can span blocks. Observe each key against
+                # a fresh snapshot instead of aging the first key's context.
+                context = self.store.readiness()
+                if not context or context.get('transaction_ready') is not True or context.get('protocol') != 'v0.22.0':
+                    raise PreparationUnavailable('Local key recovery requires a ready index')
+                height = uint(context['indexed_height'])
+                tip = self.node.height()
+                if context.get('chain_id') != self.node.chain_id or not height <= tip <= height + 5:
+                    raise PreparationUnavailable('Local key recovery requires a current matching index')
                 path = '/structs/address/' + quote(address, safe='')
                 indexed = self.lcd.get(path, height)
                 current = self.lcd.get(path, tip) if tip != height else indexed

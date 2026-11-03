@@ -34,7 +34,7 @@ Both keyring layouts are supported: legacy `.info`/`.address` files directly in 
 | `TSA_RPC_URL` | `http://structsd:26657`; current trusted RPC with transaction, block and block-result history. |
 | `TSA_LCD_URL` | `http://structsd:1317`; height-pinned API responses required. |
 | `TSA_CHAIN_ID` | `structstestnet-111`; other networks are rejected by this release. |
-| `TSA_WORKERS` | `30`, valid 1–128. Legacy `AGENT_TARGET_NUMBER` is accepted as a fallback. |
+| `TSA_WORKERS` | `6`, valid 1–128. Explicit `TSA_WORKERS` takes precedence; legacy `AGENT_TARGET_NUMBER` is accepted as a fallback. Tune for host CPU capacity, not signer pool size. |
 | `TSA_ROLE_MAX_KEYS` | `40`, valid 1–40; automatic growth counts keys with the copied grant (including supersets) and matching pending requests; requires the capacity migration. |
 | `TSA_GAS_PRICE` | No implicit value. Exact native price such as `0.025ualpha`; required for priced GuildCreate/ReactorRestart operations. Configure for the target node's admission policy. |
 | `TSA_KEYRING_DIR` | `/var/structs/accounts`. |
@@ -100,3 +100,9 @@ The last test creates a private validator/genesis inside the network-disabled co
 Recovery selects only `prepared`, `sending`, `unknown`, and `accepted` submissions, plus unsigned `claimed` rows. A `broadcast` queue row can remain after its submission commits; it must not remain in the recovery rotation. This uses the active-submission partial index and preserves recovery after a crash before signing. It does not change send permits or rebroadcast uncertain transactions.
 
 Deploy the TSA recovery update independently of the capacity migration. Automatic growth above an old total-role limit requires the new database migration. No existing account is deleted or granted new permissions by either change. Pool requests still copy one eligible source account's exact grant, require simulation, and serialize outstanding registrations per role. Object-specific grants are not cloned.
+
+Automatic pool registrations take precedence over ordinary eligible pending work after database migration `function-signer-key-pool-20261103-priority`. Priority follows the current registration of an audited pool request, including renewed attempts; ordinary address registrations retain FIFO ordering. Claims still require an available authorized signer and, for TSA, a fresh local inventory. Priority does not interrupt an already claimed transaction. The change is in TSA’s inventory-aware database claim function and does not require a TSA image rebuild.
+
+### Signing during index advancement
+
+Database migration `function-signer-20261103-observation-window` allows a signing observation to lag the current index by at most five blocks. It preserves current authorization, readiness, immutable signed identity, and pre-broadcast sequence/timeout/simulation checks. Inventory uses the same bounded index-advance window and refreshes its snapshot for each key. Slow attempts beyond the window still defer. Start with six workers on a constrained host; signer account count does not require an equal number of concurrent signing subprocesses.

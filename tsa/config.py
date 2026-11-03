@@ -23,7 +23,7 @@ class Config:
         chain = os.environ.get('TSA_CHAIN_ID', os.environ.get('NETWORK_CHAIN_ID', 'structstestnet-111'))
         if chain != 'structstestnet-111':
             raise ValueError('This migration supports the configured v0.22 testnet only')
-        workers = int(os.environ.get('TSA_WORKERS', os.environ.get('AGENT_TARGET_NUMBER', '30')))
+        workers = int(os.environ.get('TSA_WORKERS', os.environ.get('AGENT_TARGET_NUMBER', '6')))
         maximum = int(os.environ.get('TSA_ROLE_MAX_KEYS', '40'))
         if not 1 <= workers <= 128 or not 1 <= maximum <= 40:
             raise ValueError('Worker count must be 1..128 and role key limit 1..40')

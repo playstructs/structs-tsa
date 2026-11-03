@@ -10,6 +10,24 @@ from tsa.rpc import tx_hash
 
 
 class RecoveryTests(unittest.TestCase):
+    def test_each_key_observes_a_fresh_height_during_a_long_inventory_pass(self):
+        store, node, lcd, keys, journal = Mock(), Mock(), Mock(), Mock(), Mock()
+        keys.inventory.return_value = [{'name': 'a', 'address': 'a'}, {'name': 'b', 'address': 'b'}]
+        def context(height):
+            return {'transaction_ready': True, 'protocol': 'v0.22.0',
+                    'chain_id': 'structstestnet-111', 'indexed_height': str(height)}
+        store.readiness.side_effect = [context(3353000), context(3353000), context(3353008)]
+        node.chain_id = 'structstestnet-111'
+        node.height.side_effect = [3353001, 3353009]
+        node.call.return_value = {'response': {'version': '0.22.0'}}
+        lcd.get.side_effect = lambda path, height: {'address': path.rsplit('/', 1)[1], 'playerId': '1-1', 'permissions': '16'}
+        journal.observe.return_value = set()
+        store.reconcile_key.return_value = 'ready'
+        inventory = Inventory(store, node, lcd, keys, Mock(inventory_id='volume'), journal)
+        self.assertEqual(inventory.run(), {'known': 2, 'ready': 2})
+        self.assertEqual([call.args[3:5] for call in store.reconcile_key.call_args_list],
+                         [(3353000, 3353001), (3353008, 3353009)])
+
     def test_volume_identity_and_pending_send_survive_database_loss(self):
         with tempfile.TemporaryDirectory() as root:
             first = Volume(root)
