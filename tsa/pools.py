@@ -53,7 +53,7 @@ class Pools:
                 # bytes go only to simulation, never to broadcast or the queue.
                 # Shared player/charge/object throttles and invalid requests do
                 # not trigger growth. SQL rechecks availability, exact grants,
-                # registration authority, pending requests and the total limit.
+                # registration authority, pending requests and grant capacity.
                 try:
                     self.signer.prepare(candidate)
                 except (InvalidRequest, PreparationUnavailable, RpcError):

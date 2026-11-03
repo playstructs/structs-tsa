@@ -37,9 +37,16 @@ class Store:
             WHERE t.id=%s AND t.contract='v022-1' AND t.status IN ('claimed','broadcast'))""", (tx_id,))
 
     def recovery(self, after_id=0, limit=32):
-        return [row[0] for row in self.connection.execute("""SELECT id FROM signer.tx
-            WHERE contract='v022-1' AND status IN ('claimed','broadcast') AND id>%s ORDER BY id LIMIT %s""",
-            (after_id, limit))]
+        # Broadcast queue rows are retained after commitment. Page only active
+        # submissions, plus claims that crashed before signed bytes were saved.
+        return [row[0] for row in self.connection.execute("""SELECT id FROM (
+            SELECT s.tx_id AS id FROM signer.tx_submission s
+            WHERE s.state IN ('prepared','sending','unknown','accepted') AND s.tx_id>%s
+            UNION ALL
+            SELECT t.id FROM signer.tx t
+            WHERE t.contract='v022-1' AND t.status='claimed' AND t.id>%s
+                AND NOT EXISTS (SELECT 1 FROM signer.tx_submission s WHERE s.tx_id=t.id)
+            ) active ORDER BY id LIMIT %s""", (after_id, after_id, limit))]
 
     def submission(self, tx_id):
         return self.scalar('SELECT signer.SUBMISSION_V022(%s)', (tx_id,))

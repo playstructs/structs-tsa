@@ -9,7 +9,7 @@ The Trans-Planetary Signing Authority signs queued Structs transactions with key
 - SQL stores the immutable signed bytes, hash and account state. A journal on the key volume is persisted before obtaining the one-use SQL send permit. The worker makes **one broadcast attempt**. Timeout, lost acknowledgement, missing index results and restarts only trigger observation of that same identity. They never automatically replace or resend it.
 - Keys remain reserved until a definitive rejection, an unsent cancellation, or matching transaction bytes and results in a chain block. Unresolved sends survive database loss through the local journal.
 - Startup and periodic reconciliation inventory **all local keyring names**, including legacy `account_*` keys. Registered keys are restored to SQL only when current chain ownership/permissions match a ready index. Unregistered, conflicting or uncertain keys remain visible and inactive. Existing claims and managed-registration evidence are preserved.
-- Queue pressure can request extra keys for an existing role. Each request records one eligible source key's exact current grant, the queued work and an idempotency UUID. It never combines grants. The total is at most **40 keys per role**, including keys still being generated or registered. Shared throttles do not trigger growth. Available eligible local keys are used first.
+- Queue pressure can request extra keys for an existing role. Each request records one eligible source key's exact current grant, the queued work and an idempotency UUID. It never combines grants. With database migration `function-signer-key-pool-20261103-capacity`, automatic growth is limited to **40 keys per copied permission mask per role**, counting current grants that contain that mask and matching unfinished registrations. Unrelated legacy keys and unregistered stubs without requests do not consume that capacity. Manual requests retain the total-role ceiling. Shared throttles do not trigger growth. Available eligible local keys are used first.
 - **Additional roles are created manually**, or from existing explicit onboarding requests. Queue pressure never creates a new player/role. A new role's primary key receives the protocol-required `33554431` grant; subsequent scoped authority still needs to be granted explicitly.
 
 The keyring uses the existing `test` backend. Protect and back up the entire persistent volume: it contains signing keys, recovery phrases and the send journal. SQL contains public key identifiers and transaction evidence, never recovery phrases. Do not share one volume between the old shell workers and this worker.
@@ -35,7 +35,7 @@ Both keyring layouts are supported: legacy `.info`/`.address` files directly in 
 | `TSA_LCD_URL` | `http://structsd:1317`; height-pinned API responses required. |
 | `TSA_CHAIN_ID` | `structstestnet-111`; other networks are rejected by this release. |
 | `TSA_WORKERS` | `30`, valid 1–128. Legacy `AGENT_TARGET_NUMBER` is accepted as a fallback. |
-| `TSA_ROLE_MAX_KEYS` | `40`, valid 1–40; counts existing and pending keys. |
+| `TSA_ROLE_MAX_KEYS` | `40`, valid 1–40; automatic growth counts keys with the copied grant (including supersets) and matching pending requests; requires the capacity migration. |
 | `TSA_GAS_PRICE` | No implicit value. Exact native price such as `0.025ualpha`; required for priced GuildCreate/ReactorRestart operations. Configure for the target node's admission policy. |
 | `TSA_KEYRING_DIR` | `/var/structs/accounts`. |
 | `TSA_HOME` | `/var/structs/chain`. |
@@ -94,3 +94,9 @@ docker run --rm --platform linux/amd64 --network none \
 The last test creates a private validator/genesis inside the network-disabled container, simulates and commits a transaction, registers a newly generated key using the actual nonce proof, and signs with that new key. It never reaches testnet.
 
 `tests/run_database_integration.py` is the workspace harness for full Sqitch deployment on two disposable PostgreSQL instances, first-role bootstrap, real CLI signing, SQL-volume-loss recovery and actual daemon health/shutdown under `structs_tsa`. Its existing-key recovery case uses the old image's flat volume layout. It requires adjacent `structs-pg`, the labelled disposable `structs-v022-pg` image and the local candidate tag `structs-v022-tsa-candidate:development`; `--schema PATH` and `--image TAG` select an exported schema revision and a different built artifact explicitly. It creates an internal Docker network and removes its containers/network afterward. Run the companion signer SQL suites in a disposable database only. Fixture RPCs test recovery behavior; the network-disabled node test separately checks real chain semantics.
+
+### November 3 recovery and legacy pool correction
+
+Recovery selects only `prepared`, `sending`, `unknown`, and `accepted` submissions, plus unsigned `claimed` rows. A `broadcast` queue row can remain after its submission commits; it must not remain in the recovery rotation. This uses the active-submission partial index and preserves recovery after a crash before signing. It does not change send permits or rebroadcast uncertain transactions.
+
+Deploy the TSA recovery update independently of the capacity migration. Automatic growth above an old total-role limit requires the new database migration. No existing account is deleted or granted new permissions by either change. Pool requests still copy one eligible source account's exact grant, require simulation, and serialize outstanding registrations per role. Object-specific grants are not cloned.
