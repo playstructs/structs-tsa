@@ -10,12 +10,17 @@ root = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser()
 parser.add_argument('--schema', type=Path, default=root.parent / 'structs-pg')
 parser.add_argument('--image', default='structs-v022-tsa-candidate:development')
+parser.add_argument('--pg-image', help='Image for new disposable PG containers; never an existing database')
+parser.add_argument('--source', action='store_true', help='Test checkout modules using the selected TSA image runtime')
 args = parser.parse_args()
 schema = args.schema.resolve()
-label = subprocess.check_output(['docker', 'inspect', '--format', '{{index .Config.Labels "structs.task"}}', 'structs-v022-pg'], text=True).strip()
-if label != 'v022-integration':
-    raise RuntimeError('Source PostgreSQL must carry the disposable-test label')
-image = subprocess.check_output(['docker', 'inspect', '--format', '{{.Image}}', 'structs-v022-pg'], text=True).strip()
+if args.pg_image:
+    image = args.pg_image
+else:
+    label = subprocess.check_output(['docker', 'inspect', '--format', '{{index .Config.Labels "structs.task"}}', 'structs-v022-pg'], text=True).strip()
+    if label != 'v022-integration':
+        raise RuntimeError('Source PostgreSQL must carry the disposable-test label')
+    image = subprocess.check_output(['docker', 'inspect', '--format', '{{.Image}}', 'structs-v022-pg'], text=True).strip()
 network = 'structs-v022-tsa-' + uuid4().hex[:10]
 containers = []
 try:
@@ -48,7 +53,7 @@ try:
         print(alias + ': full Sqitch deploy and verify passed', flush=True)
     result = subprocess.run(['docker', 'run', '--rm', '--network', network, '--platform', 'linux/amd64',
         '--label', 'structs.task=v022-tsa-test', '-v', str(root) + ':/workspace:ro', '-v', str(schema) + ':/schema:ro',
-        '-e', 'PYTHONPATH=/opt/tsa', '-e', 'TSA_DISPOSABLE_TEST=v022-integration',
+        '-e', 'PYTHONPATH=' + ('/workspace' if args.source else '/opt/tsa'), '-e', 'TSA_DISPOSABLE_TEST=v022-integration',
         '-e', 'DATABASE_URL=postgres://structs@tsa-first:5432/structs',
         '-e', 'TSA_REBUILT_DATABASE_URL=postgres://structs@tsa-second:5432/structs',
         '-w', '/workspace', '--entrypoint', 'python', args.image,

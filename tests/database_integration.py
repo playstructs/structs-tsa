@@ -37,6 +37,7 @@ class Chain:
     height = 3353000
     broadcasts = 0
     lose_response = False
+    primary_ready = False
     owners = {}
     transactions = {}
 
@@ -63,7 +64,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         address = self.path.rsplit('/', 1)[-1]
         height = self.headers['x-cosmos-block-height']
-        if self.path.startswith('/structs/address/'):
+        if self.path.endswith('/cosmos/base/tendermint/v1beta1/node_info'):
+            self.reply({'default_node_info': {'network': Chain.chain_id},
+                        'application_version': {'version': '0.22.0'}}, height)
+        elif self.path.startswith('/structs/address/'):
             player, permissions = Chain.owners.get(address, ('', 0))
             self.reply({'address': address, 'playerId': player, 'permissions': str(permissions), 'proofNonce': '0'}, height)
         else:
@@ -76,7 +80,8 @@ class Handler(BaseHTTPRequestHandler):
         error = None
         if method == 'status':
             result = {'node_info': {'network': Chain.chain_id},
-                      'sync_info': {'latest_block_height': str(Chain.height), 'catching_up': False}}
+                      'sync_info': {'latest_block_height': str(Chain.height),
+                                    'catching_up': self.path == '/primary' and not Chain.primary_ready}}
         elif method == 'abci_info':
             result = {'response': {'version': '0.22.0'}}
         elif method == 'abci_query':
@@ -295,7 +300,9 @@ def main():
             # Start the real supervisor under its dedicated login, observe its
             # health and SIGTERM exit. It must not invent work after SQL reset.
             environment = dict(os.environ, DATABASE_URL=make_conninfo(second_dsn, user='structs_tsa'),
-                TSA_RPC_URL=url, TSA_LCD_URL=url, TSA_HOME=cli.home, TSA_KEYRING_DIR=cli.keyring,
+                TSA_RPC_URL=url+'/primary', TSA_LCD_URL=url,
+                TSA_RPC_FALLBACK_URL=url, TSA_LCD_FALLBACK_URL=url,
+                TSA_HOME=cli.home, TSA_KEYRING_DIR=cli.keyring,
                 TSA_WORKERS='2', TSA_ROLE_MAX_KEYS='40')
             health = Path('/run/tsa/health.json')
             health.unlink(missing_ok=True)
@@ -315,6 +322,18 @@ def main():
                         time.sleep(.2)
                     checked = subprocess.run([sys.executable, '-m', 'tsa', 'health'], env=environment, capture_output=True)
                     assert checked.returncode == 0, 'Container healthcheck rejected the running supervisor'
+                    assert json.loads(checked.stdout)['endpoint'] == 'fallback', checked.stdout
+                    Chain.primary_ready = True
+                    deadline = time.monotonic() + 60
+                    while True:
+                        status = json.loads(health.read_text())
+                        if status.get('ready') is True and status.get('endpoint', {}).get('mode') == 'primary':
+                            break
+                        assert process.poll() is None, 'Supervisor exited during endpoint recovery'
+                        assert time.monotonic() < deadline, 'Supervisor did not recover to primary'
+                        time.sleep(.2)
+                    checked = subprocess.run([sys.executable, '-m', 'tsa', 'health'], env=environment, capture_output=True)
+                    assert checked.returncode == 0 and json.loads(checked.stdout)['endpoint'] == 'primary', checked.stdout
                     process.terminate()
                     assert process.wait(timeout=30) == 0
                     assert json.loads(health.read_text())['state'] == 'stopped'
@@ -326,7 +345,9 @@ def main():
                         process.wait()
             print(json.dumps({'real_sql': True, 'actual_release_cli': '0.22.0', 'rpc': 'local fixture',
                               'broadcasts_to_fixture': 2, 'live_broadcasts': 0, 'recovered_database': True,
-                              'held_unknown_send': True, 'daemon_health_and_shutdown': True, 'concurrent_last_slot_and_generation_claim': True, 'dedicated_database_login': True, 'no_duplicate_send_or_queue': True, 'result': 'passed'}))
+                              'held_unknown_send': True, 'daemon_health_and_shutdown': True,
+                              'daemon_fallback_and_primary_recovery': True,
+                              'concurrent_last_slot_and_generation_claim': True, 'dedicated_database_login': True, 'no_duplicate_send_or_queue': True, 'result': 'passed'}))
     finally:
         if store is not None:
             store.close()

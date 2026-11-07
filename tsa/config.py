@@ -14,6 +14,8 @@ class Config:
     workers: int
     pool_maximum: int
     gas_price: str | None
+    rpc_fallback: str | None = None
+    lcd_fallback: str | None = None
 
     @classmethod
     def from_environment(cls):
@@ -27,8 +29,12 @@ class Config:
         maximum = int(os.environ.get('TSA_ROLE_MAX_KEYS', '40'))
         if not 1 <= workers <= 128 or not 1 <= maximum <= 40:
             raise ValueError('Worker count must be 1..128 and role key limit 1..40')
+        rpc_fallback = os.environ.get('TSA_RPC_FALLBACK_URL') or None
+        lcd_fallback = os.environ.get('TSA_LCD_FALLBACK_URL') or None
+        if bool(rpc_fallback) != bool(lcd_fallback):
+            raise ValueError('TSA fallback requires both RPC and LCD URLs')
         return cls(database, chain, os.environ.get('TSA_RPC_URL', 'http://structsd:26657'),
                    os.environ.get('TSA_LCD_URL', 'http://structsd:1317'),
                    os.environ.get('TSA_KEYRING_DIR', '/var/structs/accounts'),
                    os.environ.get('TSA_HOME', '/var/structs/chain'), workers, maximum,
-                   os.environ.get('TSA_GAS_PRICE') or None)
+                   os.environ.get('TSA_GAS_PRICE') or None, rpc_fallback, lcd_fallback)

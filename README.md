@@ -33,6 +33,8 @@ Both keyring layouts are supported: legacy `.info`/`.address` files directly in 
 | `DATABASE_URL` | Required. Use the dedicated `structs_tsa` login and the stack's TLS/authentication policy. |
 | `TSA_RPC_URL` | `http://structsd:26657`; current trusted RPC with transaction, block and block-result history. |
 | `TSA_LCD_URL` | `http://structsd:1317`; height-pinned API responses required. |
+| `TSA_RPC_FALLBACK_URL` | Disabled by default. Optional trusted fallback RPC; requires `TSA_LCD_FALLBACK_URL`. |
+| `TSA_LCD_FALLBACK_URL` | Disabled by default. Matching fallback LCD; set both fallback values empty to disable. |
 | `TSA_CHAIN_ID` | `structstestnet-111`; other networks are rejected by this release. |
 | `TSA_WORKERS` | `6`, valid 1–128. Explicit `TSA_WORKERS` takes precedence; legacy `AGENT_TARGET_NUMBER` is accepted as a fallback. Tune for host CPU capacity, not signer pool size. |
 | `TSA_ROLE_MAX_KEYS` | `40`, valid 1–40; automatic growth counts keys with the copied grant (including supersets) and matching pending requests; requires the capacity migration. |
@@ -95,6 +97,18 @@ The last test creates a private validator/genesis inside the network-disabled co
 
 `tests/run_database_integration.py` is the workspace harness for full Sqitch deployment on two disposable PostgreSQL instances, first-role bootstrap, real CLI signing, SQL-volume-loss recovery and actual daemon health/shutdown under `structs_tsa`. Its existing-key recovery case uses the old image's flat volume layout. It requires adjacent `structs-pg`, the labelled disposable `structs-v022-pg` image and the local candidate tag `structs-v022-tsa-candidate:development`; `--schema PATH` and `--image TAG` select an exported schema revision and a different built artifact explicitly. It creates an internal Docker network and removes its containers/network afterward. Run the companion signer SQL suites in a disposable database only. Fixture RPCs test recovery behavior; the network-disabled node test separately checks real chain semantics.
 
+To test checkout changes with official image runtimes, without building or
+deploying a local image, use:
+
+```sh
+python3 tests/run_database_integration.py --source \
+  --image structs/structs-tsa:latest --pg-image structs/structs-pg:latest
+```
+
+`--pg-image` replaces the labelled source-container prerequisite. Both databases
+are still newly created, isolated and disposable. The daemon test covers healthy
+public fallback, automatic primary recovery and shutdown without duplicate sends.
+
 ### November 3 recovery and legacy pool correction
 
 Recovery selects only `prepared`, `sending`, `unknown`, and `accepted` submissions, plus unsigned `claimed` rows. A `broadcast` queue row can remain after its submission commits; it must not remain in the recovery rotation. This uses the active-submission partial index and preserves recovery after a crash before signing. It does not change send permits or rebroadcast uncertain transactions.
@@ -107,17 +121,37 @@ Automatic pool registrations take precedence over ordinary eligible pending work
 
 Database migration `function-signer-20261103-observation-window` allows a signing observation to lag the current index by at most five blocks. It preserves current authorization, readiness, immutable signed identity, and pre-broadcast sequence/timeout/simulation checks. Inventory uses the same bounded index-advance window and refreshes its snapshot for each key. Slow attempts beyond the window still defer. Start with six workers on a constrained host; signer account count does not require an equal number of concurrent signing subprocesses.
 
-### Unhealthy while the local node catches up
+### Endpoint fallback while the local node catches up
 
 TSA and sync-state can use different chain endpoints. A current index does not
 make the local signing node current. TSA requires the verified v0.22.0 protocol,
 a caught-up node, a current matching index and at least one verified local key.
-A pre-upgrade node causes `NodeProtocolUnavailable` in maintenance logs and
-`local-node-protocol-unavailable` from `python -m tsa health`. Other health reasons
-identify a stale heartbeat, stale inventory or no ready signing key. Diagnostics
-contain fixed reason codes, never exception messages or key material.
+Configure a fallback pair to keep TSA operating through a trusted current public
+node while the local node catches up:
 
-Compare the configured RPC's `/status` (`catching_up`, `latest_block_height`)
-and `/abci_info` (`response.version`) with the indexed height. Let the local node
-complete its upgrades and catch-up; inventory retries every ten seconds. No TSA
-restart is needed when its dependencies recover. Keep readiness checks enabled.
+```env
+TSA_RPC_FALLBACK_URL=https://public.testnet.structs.network:26657
+TSA_LCD_FALLBACK_URL=https://public.testnet.structs.network
+```
+
+The selector probes at most once per ten seconds across workers. It checks the
+RPC chain, caught-up flag, v0.22 protocol, and alignment with a ready index. The
+paired LCD must prove that same height and report the same chain and protocol.
+If the primary pair fails, both clients switch to the fallback pair. Returning
+to primary requires three consecutive successful probes spaced at least ten
+seconds apart. Both pairs failing defers work; it never weakens readiness.
+
+Each transaction attempt and maintenance pass keeps its chosen pair. Switching
+affects subsequent operations only. Signing and keys remain local. Existing
+account, grant, sequence, timeout and simulation checks still run. A lost
+broadcast response remains an unknown submission: another endpoint may observe
+the saved hash, but it cannot grant another broadcast or a new signed identity.
+
+`python -m tsa health` reports `healthy` with `endpoint: primary` or
+`endpoint: fallback`. `/run/tsa/health.json` also records the last probe time and
+fixed failure codes, without URLs, response bodies or key material. No available
+pair reports `chain-endpoints-unavailable`; stale probes, inventory and missing
+ready keys remain unhealthy. A protocol change during a pinned operation can
+report `chain-node-protocol-unavailable`. Inventory retries every ten seconds;
+no restart is needed when endpoints recover. Changing endpoint configuration
+requires recreating TSA. The signing index must still be current.

@@ -32,6 +32,8 @@ def main():
         reason = health_reason(status, time.time())
         if reason:
             report('unhealthy', reason=reason)
+        else:
+            report('healthy', endpoint=status.get('endpoint', {}).get('mode', 'primary'))
         return 1 if reason else 0
     config = Config.from_environment()
     if args.command == 'reconcile':

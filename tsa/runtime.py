@@ -8,6 +8,7 @@ import time
 
 from .accounts import Accounts, Keys
 from .durable import Journal, Volume, write_json
+from .endpoints import EndpointSelector
 from .inventory import Inventory
 from .pools import Pools
 from .roles import Roles
@@ -22,9 +23,9 @@ def report(event, **fields):
     print(json.dumps({'event': event, **fields}, separators=(',', ':')), flush=True)
 
 
-def clients(config):
-    node = Node(config.rpc, config.chain_id)
-    lcd = Lcd(config.lcd)
+def clients(config, pair=None):
+    node = pair.node if pair else Node(config.rpc, config.chain_id)
+    lcd = pair.lcd if pair else Lcd(config.lcd)
     cli = Cli(home=config.home, keyring=config.keyring)
     return node, lcd, cli, Signer(node, lcd, cli, gas_price=config.gas_price)
 
@@ -32,7 +33,8 @@ def clients(config):
 def reconcile(config):
     store = Store(config.database)
     try:
-        node, lcd, cli, _ = clients(config)
+        pair = EndpointSelector(config).select(store.readiness())
+        node, lcd, cli, _ = clients(config, pair)
         volume = Volume(config.keyring)
         return Inventory(store, node, lcd, Keys(cli), volume, Journal(volume)).run()
     finally:
@@ -49,11 +51,13 @@ class Runtime:
         self.inventory_time = 0.0
         self.inventory_ready = False
         self.inventory_error = None
+        self.endpoints = EndpointSelector(config)
 
     def process(self, tx_id):
         store = Store(self.config.database)
         try:
-            node, _, _, signer = clients(self.config)
+            pair = self.endpoints.select(store.readiness())
+            node, _, _, signer = clients(self.config, pair)
             return Worker(store, node, signer, Journal(self.volume)).process(tx_id)
         finally:
             store.close()
@@ -65,16 +69,25 @@ class Runtime:
         account_cursor = 0
         role_cursor = 0
         previous_counts = None
+        previous_endpoint = None
+        pool_cursor = 0
         while not self.stop.is_set():
             try:
                 if store is None:
                     store = Store(self.config.database)
-                    node, lcd, cli, signer = clients(self.config)
-                    keys = Keys(cli)
-                    inventory = Inventory(store, node, lcd, keys, self.volume, Journal(self.volume), self.stop.is_set)
-                    accounts = Accounts(store, node, lcd, keys)
-                    roles = Roles(store, node, lcd, keys, self.volume)
-                    pools = Pools(store, node, signer, self.volume, self.config.pool_maximum, self.stop.is_set)
+                # Pin the whole maintenance pass. A failed call defers work;
+                # changing pairs is reserved for the next pass/transaction.
+                pair = self.endpoints.select(store.readiness())
+                if pair.mode != previous_endpoint:
+                    report('chain-endpoint-selected', endpoint=pair.mode)
+                    previous_endpoint = pair.mode
+                node, lcd, cli, signer = clients(self.config, pair)
+                keys = Keys(cli)
+                inventory = Inventory(store, node, lcd, keys, self.volume, Journal(self.volume), self.stop.is_set)
+                accounts = Accounts(store, node, lcd, keys)
+                roles = Roles(store, node, lcd, keys, self.volume)
+                pools = Pools(store, node, signer, self.volume, self.config.pool_maximum, self.stop.is_set)
+                pools.cursor = pool_cursor
                 counts = inventory.run()
                 self.inventory_error = None
                 self.inventory_time = time.time()
@@ -110,6 +123,7 @@ class Runtime:
                 if not self.stop.is_set():
                     for account_id in pools.run():
                         report('pool-key-requested', account_id=account_id)
+                    pool_cursor = pools.cursor
             except Exception as error:
                 self.inventory_ready = False
                 self.inventory_error = type(error).__name__
@@ -165,7 +179,8 @@ class Runtime:
                                 tx_id = claim['transaction']['id']
                                 futures[tx_id] = executor.submit(self.process, tx_id)
                         write_json(self.health, {'heartbeat': time.time(), 'inventory': self.inventory_time,
-                                                'state': 'running', 'ready': self.inventory_ready, 'inventory_error': self.inventory_error, 'workers': len(futures)})
+                                                'state': 'running', 'ready': self.inventory_ready, 'inventory_error': self.inventory_error,
+                                                'endpoint': self.endpoints.snapshot(), 'workers': len(futures)})
                     except Exception as error:
                         report('database-unavailable', error=type(error).__name__)
                         if store is not None:

@@ -6,7 +6,7 @@ from .worker import PreparationUnavailable
 
 
 class NodeProtocolUnavailable(PreparationUnavailable):
-    """The local node has not reached the supported signing protocol."""
+    """The selected node has not reached the supported signing protocol."""
 
 
 class Inventory:
