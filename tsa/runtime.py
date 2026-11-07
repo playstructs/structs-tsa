@@ -48,6 +48,7 @@ class Runtime:
         self.health.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.inventory_time = 0.0
         self.inventory_ready = False
+        self.inventory_error = None
 
     def process(self, tx_id):
         store = Store(self.config.database)
@@ -75,6 +76,7 @@ class Runtime:
                     roles = Roles(store, node, lcd, keys, self.volume)
                     pools = Pools(store, node, signer, self.volume, self.config.pool_maximum, self.stop.is_set)
                 counts = inventory.run()
+                self.inventory_error = None
                 self.inventory_time = time.time()
                 self.inventory_ready = counts.get('ready', 0) > 0
                 if counts != previous_counts:
@@ -109,7 +111,9 @@ class Runtime:
                     for account_id in pools.run():
                         report('pool-key-requested', account_id=account_id)
             except Exception as error:
-                report('maintenance-unavailable', error=type(error).__name__)
+                self.inventory_ready = False
+                self.inventory_error = type(error).__name__
+                report('maintenance-unavailable', error=self.inventory_error)
                 if store is not None:
                     store.close()
                     store = None
@@ -161,7 +165,7 @@ class Runtime:
                                 tx_id = claim['transaction']['id']
                                 futures[tx_id] = executor.submit(self.process, tx_id)
                         write_json(self.health, {'heartbeat': time.time(), 'inventory': self.inventory_time,
-                                                'state': 'running', 'ready': self.inventory_ready, 'workers': len(futures)})
+                                                'state': 'running', 'ready': self.inventory_ready, 'inventory_error': self.inventory_error, 'workers': len(futures)})
                     except Exception as error:
                         report('database-unavailable', error=type(error).__name__)
                         if store is not None:

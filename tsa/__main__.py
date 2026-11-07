@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 import time
 
+from .health import health_reason
 from .config import Config
 from .runtime import Runtime, reconcile, report
 
@@ -28,8 +29,10 @@ def main():
     args = parser.parse_args()
     if args.command == 'health':
         status = json.loads(Path('/run/tsa/health.json').read_text())
-        return 0 if status.get('state') == 'running' and time.time() - status['heartbeat'] < 90 \
-            and time.time() - status.get('inventory', 0) < 120 and status.get('ready') is True else 1
+        reason = health_reason(status, time.time())
+        if reason:
+            report('unhealthy', reason=reason)
+        return 1 if reason else 0
     config = Config.from_environment()
     if args.command == 'reconcile':
         report('key-inventory', **reconcile(config))

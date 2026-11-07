@@ -5,6 +5,10 @@ from .rpc import RpcError, uint
 from .worker import PreparationUnavailable
 
 
+class NodeProtocolUnavailable(PreparationUnavailable):
+    """The local node has not reached the supported signing protocol."""
+
+
 class Inventory:
     def __init__(self, store, node, lcd, keys, volume, journal, stopping=lambda: False):
         self.store, self.node, self.lcd, self.keys = store, node, lcd, keys
@@ -21,7 +25,7 @@ class Inventory:
         if not context or context.get('transaction_ready') is not True or context.get('protocol') != 'v0.22.0':
             return {'known': len(keys), 'waiting-index': len(keys)}
         if self.node.call('abci_info', {}).get('response', {}).get('version') not in ('0.22.0', 'v0.22.0'):
-            raise PreparationUnavailable('Key activation requires the verified v0.22.0 protocol')
+            raise NodeProtocolUnavailable('Key activation requires the verified v0.22.0 protocol')
         counts = {'known': len(keys)}
         for key in keys:
             if self.stopping():

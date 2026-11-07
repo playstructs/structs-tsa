@@ -106,3 +106,18 @@ Automatic pool registrations take precedence over ordinary eligible pending work
 ### Signing during index advancement
 
 Database migration `function-signer-20261103-observation-window` allows a signing observation to lag the current index by at most five blocks. It preserves current authorization, readiness, immutable signed identity, and pre-broadcast sequence/timeout/simulation checks. Inventory uses the same bounded index-advance window and refreshes its snapshot for each key. Slow attempts beyond the window still defer. Start with six workers on a constrained host; signer account count does not require an equal number of concurrent signing subprocesses.
+
+### Unhealthy while the local node catches up
+
+TSA and sync-state can use different chain endpoints. A current index does not
+make the local signing node current. TSA requires the verified v0.22.0 protocol,
+a caught-up node, a current matching index and at least one verified local key.
+A pre-upgrade node causes `NodeProtocolUnavailable` in maintenance logs and
+`local-node-protocol-unavailable` from `python -m tsa health`. Other health reasons
+identify a stale heartbeat, stale inventory or no ready signing key. Diagnostics
+contain fixed reason codes, never exception messages or key material.
+
+Compare the configured RPC's `/status` (`catching_up`, `latest_block_height`)
+and `/abci_info` (`response.version`) with the indexed height. Let the local node
+complete its upgrades and catch-up; inventory retries every ten seconds. No TSA
+restart is needed when its dependencies recover. Keep readiness checks enabled.
